@@ -130,7 +130,7 @@
 </div>
 
 <div id="tripleRankOverlay" class="modal">
-  <div style="color:var(--gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 圍骰大獎英雄榜 (最近10次)</div>
+  <div style="color:var(--gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆最近10次圍骰得主</div>
   <div id="tripleRankList"></div>
   <button class="btn-ui" style="background:var(--gold); margin-top:20px; width:150px; height: 50px; flex: none;" onclick="closeModal('tripleRankOverlay')">返回</button>
 </div>
@@ -173,7 +173,7 @@
     <div style="text-align:center; color:var(--gold); font-size:12px; font-weight:bold; padding-bottom:5px; border-bottom:1px solid #444;">開骰紀錄</div>
     <div id="historyList"></div>
     
-    <div class="triple-winner-btn" onclick="openModal('tripleRankOverlay')">
+    <div class="triple-winner-btn" onclick="showRank()">
         <span>🏆 最新圍骰得主</span>
         <div id="latestWinnerInfo">等待中...</div>
     </div>
@@ -273,7 +273,6 @@ async function saveData() {
     const playerId = localStorage.getItem('player_id');
     if (playerId && db) {
         try {
-            // 使用 update 僅更新餘額，不影響其他欄位
             await db.collection("users").doc(playerId).update({ 
                 balance: balance,
                 lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
@@ -294,26 +293,46 @@ function initTable() {
   updateUI(); renderHistory(); loadTripleWinners();
 }
 
-// --- 監聽圍骰榜 ---
+// --- 監聽圍骰榜 (改為讀取最近 1 筆顯示在側邊) ---
 function loadTripleWinners() {
-    db.collection("triple_wins").orderBy("time", "desc").limit(10).onSnapshot(snapshot => {
-        let listHtml = '';
-        let latest = null;
-        snapshot.forEach((doc, idx) => {
-            const data = doc.data();
-            if(idx === 0) latest = data;
-            listHtml += `
-                <div class="rank-item">
-                    <span class="rank-name">${data.name} (${data.dice})</span>
-                    <span class="rank-amt">+$${Math.floor(data.win).toLocaleString()}</span>
-                </div>
-            `;
-        });
-        document.getElementById('tripleRankList').innerHTML = listHtml || '<div style="padding:20px; color:#666;">等待奇蹟...</div>';
+    db.collection("sicbo_wins").orderBy("time", "desc").limit(1).onSnapshot(snapshot => {
         const info = document.getElementById('latestWinnerInfo');
-        if(latest) info.innerHTML = `${latest.name} <br> 贏 $${Math.floor(latest.win).toLocaleString()}`;
-        else info.innerText = "等待...";
+        if (!snapshot.empty) {
+            const latest = snapshot.docs[0].data();
+            info.innerHTML = `${latest.name} <br> 贏 $${Math.floor(latest.win).toLocaleString()}`;
+        } else {
+            info.innerText = "等待...";
+        }
     });
+}
+
+// --- 顯示最近 10 次圍骰獲獎排行榜 ---
+async function showRank() {
+    const modal = document.getElementById('tripleRankOverlay');
+    const list = document.getElementById('tripleRankList');
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">載入中...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const snapshot = await db.collection("sicbo_wins").orderBy("time", "desc").limit(10).get();
+        list.innerHTML = '';
+        if (snapshot.empty) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無紀錄</div>';
+            return;
+        }
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const row = document.createElement('div');
+            row.className = 'rank-item';
+            row.innerHTML = `
+                <span class="rank-name">${data.name} (${data.dice})</span>
+                <span class="rank-amt">+$${Math.floor(data.win).toLocaleString()}</span>
+            `;
+            list.appendChild(row);
+        });
+    } catch (error) {
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4757;">讀取失敗</div>';
+    }
 }
 
 // --- 遊戲邏輯 ---
@@ -367,8 +386,9 @@ function simulateRound() {
     if (won > 0) winTotal += (amt + won);
   }
 
+  // 僅在開出圍骰且有人獲獎時存入紀錄
   if (isTriple && tripleWinAmt > 0) {
-      db.collection("triple_wins").add({
+      db.collection("sicbo_wins").add({
           name: localStorage.getItem('player_name') || '幸運兒',
           win: tripleWinAmt, dice: `${d[0]}${d[1]}${d[2]}`, time: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -414,50 +434,39 @@ setInterval(() => {
 
 window.onload = async () => {
     const playerId = localStorage.getItem('player_id');
-    
-    // 1. 第一時間讀取本地，確保 UI 顯示 7000 而不是 5000
     const localBal = localStorage.getItem('sicbo_balance');
-    if (localBal !== null) {
-        balance = parseFloat(localBal);
-    }
+    if (localBal !== null) { balance = parseFloat(localBal); }
 
-    // 2. 聯網校對：防止雲端舊數據「回溯」
     if (playerId && db) {
         try {
             const doc = await db.collection("users").doc(playerId).get();
             if (doc.exists) {
                 const cloudBal = doc.data().balance;
-                
-                // 如果雲端錢比較多 (代表在別台手機玩過)，才更新本地
                 if (cloudBal !== undefined && cloudBal > balance) {
                     balance = cloudBal;
                     localStorage.setItem('sicbo_balance', balance);
                 } 
-                // 如果本地錢比較多 (代表上次滑掉沒同步到)，主動幫雲端補傳一次
                 else if (cloudBal !== undefined && balance > cloudBal) {
                     saveData(); 
                 }
             }
-        } catch (e) { console.log("離線模式，錢以手機為準"); }
+        } catch (e) { console.log("離線模式"); }
     }
-
     initTable();
-    updateUI(); // 確保數字立即更新
+    updateUI();
 
-    // 攔截跳轉，確保「回首頁」一定能觸發雲端存檔
     document.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', async (e) => {
             const href = link.getAttribute('href');
             if (href && href !== '#' && !href.startsWith('javascript')) {
                 e.preventDefault();
-                await saveData(); // 等待存檔完成
+                await saveData();
                 window.location.href = href;
             }
         });
     });
 };
 
-// 最終保險：手機滑掉分頁時寫入本地
 window.addEventListener('pagehide', () => {
     localStorage.setItem('sicbo_balance', balance);
 });
