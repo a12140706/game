@@ -1,0 +1,10 @@
+{
+  "name": "阿記娛樂城",
+  "short_name": "阿記娛樂",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a0505",
+  "theme_color": "#4a0404",
+  "icons": [ ]
+}
