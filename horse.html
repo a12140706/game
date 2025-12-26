@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<title>賽馬場</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root { --gold: #ffd86b; --grass: #27ae60; --red: #ff4757; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  
+  body { 
+    background: #1a0505; color: #fff; font-family: "Microsoft JhengHei", Arial; 
+    height: 100dvh; width: 100vw; overflow: hidden;
+    display: flex;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .topbar {
+    height: calc(50px + env(safe-area-inset-top)); background: linear-gradient(#4a0404, #2a0202);
+    display: flex; align-items: center; padding: 0 15px; gap: 10px; border-bottom: 2px solid #5c0a0a; flex-shrink: 0;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  }
+  .sound-btn { background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--gold); cursor: pointer; font-size: 13px; color: #fff; }
+  .balance-box { background: rgba(0,0,0,0.5); border: 1px solid var(--gold); border-radius: 15px; padding: 4px 12px; color: var(--gold); font-weight: bold; font-size: 16px; }
+
+  /* 榜首顯示區 */
+  .rank-header-area {
+    position: absolute; top: calc(55px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    z-index: 5; display: flex; justify-content: center; width: auto;
+  }
+  .rank-btn-horizontal {
+    background: linear-gradient(#b91c1c, #7f1d1d); border: 1px solid var(--gold);
+    border-radius: 20px; padding: 4px 15px; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5); cursor: pointer; white-space: nowrap;
+  }
+  .rank-btn-horizontal span { font-size: 11px; color: #fff; }
+  #topWinnerName { font-size: 13px; color: var(--gold); font-weight: bold; }
+
+  .race-section {
+    flex: 3; display: flex; flex-direction: column;
+    border-right: 2px solid #444; position: relative;
+    padding-top: 50px; 
+  }
+
+  .track-area {
+    flex: 1; background: var(--grass); position: relative;
+    display: flex; flex-direction: column; justify-content: space-around;
+    padding: 5px 0; overflow: hidden;
+  }
+  .lane {
+    height: 15%; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.2);
+    position: relative; display: flex; align-items: center;
+  }
+  .horse {
+    position: absolute; left: 10px; font-size: 40px; transition: left 0.1s linear;
+    z-index: 2; display: flex; justify-content: center; align-items: center;
+    border-radius: 50%;
+  }
+  .horse-body { transform: scaleX(-1); }
+
+  .horse.my-horse { filter: drop-shadow(0 0 10px var(--gold)) drop-shadow(0 0 20px #f1c40f); z-index: 100; }
+  .horse.my-horse::before { content: '★'; position: absolute; top: -25px; color: var(--gold); font-size: 18px; animation: starRotate 1s infinite linear; }
+  @keyframes starRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .horse.fatigued { filter: drop-shadow(0 0 5px red); animation: blink 0.3s infinite; }
+  @keyframes blink { 50% { opacity: 0.6; } }
+  
+  .status-pop {
+    position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+    font-size: 14px; font-weight: bold; white-space: nowrap; pointer-events: none;
+    animation: popUp 1.0s ease-out forwards; z-index: 10;
+  }
+  .pop-dash { color: #fff176; text-shadow: 1px 1px 3px #000; }
+  .pop-tired { color: #ff5252; text-shadow: 1px 1px 3px #000; }
+  @keyframes popUp { 0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 100% { opacity: 0; transform: translateX(-50%) translateY(-40px); } }
+
+  .horse-num { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--gold); z-index: 5; }
+  .finish-line { position: absolute; right: 60px; top: 0; bottom: 0; width: 15px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 2px solid #ccc; z-index: 1; }
+
+  .control-section { flex: 1.2; background: #222; display: flex; flex-direction: column; padding: 8px; padding-top: 50px; padding-bottom: env(safe-area-inset-bottom); }
+  .chip-area { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .chip { width: 45px; height: 45px; border-radius: 50%; border: 2px dashed #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: #444; color: #fff; cursor: pointer; }
+  .chip.active { transform: scale(1.1); border-style: solid; border-color: var(--gold); background: #856404; box-shadow: 0 0 10px var(--gold); }
+
+  .bet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 1; }
+  .bet-btn { background: #333; border: 2px solid #555; border-radius: 10px; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+  .bet-btn span { color: var(--gold); font-size: 10px; }
+  .bet-btn.active { border-color: var(--gold); background: #4a3a00; }
+
+  .action-area { height: 60px; display: flex; align-items: center; gap: 10px; }
+  .go-btn { flex: 1; height: 45px; border-radius: 25px; background: var(--red); color: #fff; border: none; font-size: 18px; font-weight: bold; box-shadow: 0 4px 0 #8b0000; }
+  .go-btn:disabled { background: #555; box-shadow: none; transform: translateY(2px); }
+
+  #msgOverlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); padding: 20px 40px; border-radius: 20px; color: var(--gold); font-size: 24px; font-weight: bold; display: none; z-index: 100; border: 2px solid var(--gold); text-align: center; }
+
+  /* 排行榜彈窗 */
+  .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; }
+  .rank-list { width: 70%; max-height: 60%; overflow-y: auto; background: #1a1a1a; border-radius: 10px; border: 1px solid #333; }
+  .rank-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #222; font-size: 14px; }
+  .rank-name { color: var(--gold); }
+  .rank-win { color: #2ecc71; font-weight: bold; }
+
+  @media (orientation: portrait) { .portrait-tip { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #1a0505; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; } }
+  @media (orientation: landscape) { .portrait-tip { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="portrait-tip">
+  <div style="font-size: 50px;">🔄</div>
+  <p style="margin-top: 20px;">請將手機橫放進行遊戲</p>
+</div>
+
+<div id="rankModal" class="modal">
+    <div style="color:var(--gold); font-size:18px; margin-bottom:10px; font-weight:bold;">🏆 賽馬大獎英雄榜</div>
+    <div class="rank-list" id="rankList"></div>
+    <button class="sound-btn" style="margin-top:15px; padding:8px 25px;" onclick="closeRank()">返回遊戲</button>
+</div>
+
+<div class="topbar">
+  <div class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</div>
+  <div class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
+  <div class="balance-box">💎 <span id="balanceText">0</span></div>
+  <marquee style="flex:1; color:var(--gold); font-size: 12px;">賽馬即將開跑，請各位馬友準時下注</marquee>
+  <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 大廳</button></a>
+</div>
+
+<div class="rank-header-area">
+    <div class="rank-btn-horizontal" onclick="openRank()">
+        <span>🏆 榜首:</span>
+        <div id="topWinnerName">讀取中...</div>
+    </div>
+</div>
+
+<div class="race-section">
+  <div id="msgOverlay"></div>
+  <div class="track-area" id="track">
+    <div class="finish-line"></div>
+    <div class="lane"><div class="horse" id="h1"><span class="horse-num">1</span><div class="horse-body">🐎</div></div></div>
+    <div class="lane"><div class="horse" id="h2"><span class="horse-num">2</span><div class="horse-body">🦓</div></div></div>
+    <div class="lane"><div class="horse" id="h3"><span class="horse-num">3</span><div class="horse-body">🦄</div></div></div>
+    <div class="lane"><div class="horse" id="h4"><span class="horse-num">4</span><div class="horse-body">🐎</div></div></div>
+    <div class="lane"><div class="horse" id="h5"><span class="horse-num">5</span><div class="horse-body">🐎</div></div></div>
+    <div class="lane"><div class="horse" id="h6"><span class="horse-num">6</span><div class="horse-body">🐎</div></div></div>
+  </div>
+</div>
+
+<div class="control-section">
+  <div class="chip-area">
+    <div class="chip chip-500" id="chip500" onclick="setBet(5000)">5K</div>
+    <div class="chip chip-1000" id="chip1000" onclick="setBet(10000)">10K</div>
+    <div class="chip chip-5000" id="chip5000" onclick="setBet(50000)">50K</div>
+    <div class="chip chip-allin active" id="chipAllIn" onclick="setBet('allin')">梭哈</div>
+  </div>
+  <div class="bet-grid" id="betGrid"></div>
+  <div class="action-area">
+    <button id="goBtn" class="go-btn" onclick="startRace()">開跑</button>
+  </div>
+</div>
+
+<audio id="sndRace" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3" preload="auto"></audio>
+<audio id="sndWin" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
+<audio id="bgm1" src="background-music-434612.mp3" loop preload="auto"></audio>
+<audio id="bgm2" src="soft-background-music-427252.mp3" loop preload="auto"></audio>
+<audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop preload="auto"></audio>
+
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
+
+<script>
+// Firebase 初始化
+const firebaseConfig = {
+  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  authDomain: "game-80d68.firebaseapp.com",
+  projectId: "game-80d68",
+  storageBucket: "game-80d68.firebasestorage.app",
+  messagingSenderId: "636332967920",
+  appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+  measurementId: "G-MJZ4PGEHSQ"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+let selectedHorse = null;
+let currentBet = 'allin'; 
+let isRacing = false;
+let isMuted = false;
+let horseStats = []; 
+let isAudioUnlocked = false; 
+
+let currentBgmIdx = 1;
+const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+
+const horseConfigs = [
+    { filter: 'hue-rotate(0deg)' }, { filter: 'grayscale(100%)' }, { filter: 'hue-rotate(280deg)' }, 
+    { filter: 'hue-rotate(50deg) brightness(1.3)' }, { filter: 'hue-rotate(180deg)' }, { filter: 'invert(100%) brightness(1.5)' } 
+];
+
+function updateUI() {
+  document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
+  localStorage.setItem('sicbo_balance', balance);
+  const playerId = localStorage.getItem('player_id');
+  if (playerId) db.collection("users").doc(playerId).update({ balance: balance }).catch(()=>{});
+}
+
+function listenRank() {
+    db.collection("horse_wins").orderBy("win", "desc").limit(10).onSnapshot(snap => {
+        let html = '';
+        let first = true;
+        snap.forEach(doc => {
+            const d = doc.data();
+            if(first) { document.getElementById('topWinnerName').innerText = d.name; first = false; }
+            html += `<div class="rank-item"><span class="rank-name">${d.name}</span><span class="rank-win">$${Math.floor(d.win).toLocaleString()}</span></div>`;
+        });
+        document.getElementById('rankList').innerHTML = html || '<div style="padding:20px; color:#666;">等待傳奇...</div>';
+    });
+}
+
+function openRank() { document.getElementById('rankModal').style.display = 'flex'; }
+function closeRank() { document.getElementById('rankModal').style.display = 'none'; }
+
+function applyHorseStyles() {
+    for (let i = 1; i <= 6; i++) {
+        const horseEl = document.getElementById('h' + i);
+        if (horseEl) horseEl.querySelector('.horse-body').style.filter = horseConfigs[i-1].filter;
+    }
+}
+
+function stopAllBGM() {
+    bgmList.forEach(id => { if (id) { const a = document.getElementById(id); a.pause(); a.muted = true; a.currentTime = 0; } });
+}
+
+function cycleBGM() {
+    if (!isAudioUnlocked) return;
+    stopAllBGM();
+    currentBgmIdx = (currentBgmIdx + 1) % 4;
+    const btn = document.getElementById('bgmBtn');
+    if (currentBgmIdx === 0) btn.textContent = '🎵 音樂：關';
+    else {
+        btn.textContent = '🎵 音樂 ' + currentBgmIdx;
+        if (!isMuted) {
+            const bgm = document.getElementById(bgmList[currentBgmIdx]);
+            if(bgm) { bgm.muted = false; bgm.volume = 0.3; bgm.play().catch(()=>{}); }
+        }
+    }
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+    if (isMuted) stopAllBGM();
+    else if (currentBgmIdx !== 0 && isAudioUnlocked) {
+        const bgm = document.getElementById(bgmList[currentBgmIdx]);
+        if(bgm) { bgm.muted = false; bgm.play().catch(()=>{}); }
+    }
+}
+
+function unlockAudio() {
+    if (isAudioUnlocked) return;
+    const audios = document.querySelectorAll('audio');
+    audios.forEach(a => { a.muted = true; let p = a.play(); if (p !== undefined) { p.then(() => { a.pause(); a.currentTime = 0; }).catch(() => {}); } });
+    isAudioUnlocked = true;
+    setTimeout(() => { if (!isMuted && currentBgmIdx !== 0) { const bgm = document.getElementById(bgmList[currentBgmIdx]); if (bgm) { bgm.muted = false; bgm.volume = 0.3; bgm.play().catch(() => {}); } } }, 300);
+}
+document.addEventListener('click', unlockAudio);
+
+function setBet(amt) {
+  if (isRacing) return;
+  currentBet = amt;
+  document.querySelectorAll('.chip').forEach(c => {
+    if (amt === 'allin') c.classList.toggle('active', c.id === 'chipAllIn');
+    else { let val = parseInt(c.innerText.replace('K','000')); c.classList.toggle('active', val === amt); }
+  });
+}
+
+function generateNewOdds() {
+  let totalFieldPower = 0;
+  let rawScores = [];
+  let templates = [{min: 4, max: 5}, {min: 3, max: 5}, {min: 2, max: 4}, {min: 2, max: 4}, {min: 1, max: 3}, {min: 1, max: 2}];
+  templates.sort(() => Math.random() - 0.5);
+
+  for (let i = 1; i <= 6; i++) {
+    let t = templates[i-1];
+    let speed = Math.floor(Math.random() * (t.max - t.min + 1)) + t.min;
+    let burst = Math.floor(Math.random() * (t.max - t.min + 1)) + t.min;
+    let stamina = Math.floor(Math.random() * 5) + 1; 
+    let power = (Math.pow(speed, 3.5) + Math.pow(burst, 3.8) + Math.pow(stamina, 1.5)) * (0.97 + Math.random() * 0.06);
+    rawScores.push({ id: i, speed, burst, stamina, power });
+    totalFieldPower += power;
+  }
+
+  rawScores.forEach(s => {
+    let rawOdds = (1 / (s.power / totalFieldPower)) * 0.9; 
+    let finalOdds = Math.max(1.1, Math.min(99.0, parseFloat(rawOdds.toFixed(1))));
+    horseStats[s.id] = { speed: s.speed, burst: s.burst, stamina: s.stamina, odds: finalOdds.toFixed(1) };
+  });
+}
+
+function refreshOdds() {
+  const grid = document.getElementById('betGrid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= 6; i++) {
+    let s = horseStats[i];
+    grid.innerHTML += `<button class="bet-btn ${selectedHorse === i ? 'active' : ''}" onclick="selectHorse(${i})">${i}號 <span>1:${s.odds}</span><small>💨${s.speed} ⚡${s.burst} 🍖${s.stamina}</small></button>`;
+  }
+}
+
+function selectHorse(num) { if (!isRacing) { selectedHorse = num; refreshOdds(); } }
+
+function spawnStatus(horseEl, text, type) {
+    const pop = document.createElement('div'); pop.className = `status-pop pop-${type}`; pop.innerText = text;
+    horseEl.appendChild(pop); setTimeout(() => pop.remove(), 2000);
+}
+
+function startRace() {
+  if (isRacing || selectedHorse === null) { if (selectedHorse === null) showMsg("請先選擇馬匹"); return; }
+  let finalBetAmount = (currentBet === 'allin') ? balance : currentBet;
+  if (balance <= 0 || balance < finalBetAmount) { showMsg(balance <= 0 ? "沒錢了" : "餘額不足"); return; }
+
+  balance -= finalBetAmount; updateUI(); isRacing = true;
+  document.getElementById('goBtn').disabled = true;
+  document.getElementById('h' + selectedHorse).classList.add('my-horse');
+  
+  if(!isMuted && isAudioUnlocked) { const raceSnd = document.getElementById('sndRace'); raceSnd.muted = false; raceSnd.play().catch(()=>{}); }
+
+  const horses = [1, 2, 3, 4, 5, 6].map(n => {
+    const el = document.getElementById('h' + n); el.classList.add('running');
+    const s = horseStats[n];
+    return { id: n, el: el, pos: 10, speed: s.speed, burst: s.burst, stamina: s.stamina, dashCount: 0, maxDashes: s.stamina + 2, isFatigued: false, hasChecked: false };
+  });
+
+  const trackWidth = document.getElementById('track').clientWidth - 110;
+  const timer = setInterval(() => {
+    let finished = false;
+    horses.forEach(h => {
+      if (h.pos > trackWidth * 0.85 && !h.hasChecked) { h.hasChecked = true; if (Math.random() < (6 - h.stamina) * 0.12) { h.isFatigued = true; spawnStatus(h.el, "力竭!!", "tired"); h.el.classList.add('fatigued'); } }
+      let dashBonus = 0;
+      if (!h.isFatigued && h.dashCount < h.maxDashes) { if (Math.random() < (0.01 + h.burst * 0.008)) { h.dashCount++; dashBonus = (10 + h.burst * 3) + (Math.random() * 20); spawnStatus(h.el, "加速", "dash"); } }
+      let step = ((1.1 + h.speed * 0.15) * (h.isFatigued ? 0.3 : 1.0) + (Math.random() * 4.0)) * 0.5 + (dashBonus * 0.22); 
+      h.pos += step; h.el.style.left = h.pos + 'px'; h.el.style.setProperty('--speed', Math.max(0.1, 0.6 - (step / 6)) + 's');
+      if (h.pos >= trackWidth && !finished) { finished = true; clearInterval(timer); finishRace(h.id, finalBetAmount); }
+    });
+  }, 50);
+}
+
+function finishRace(winnerId, betPlaced) {
+  setTimeout(() => {
+    if (selectedHorse === winnerId) {
+      let winAmt = Math.floor(betPlaced * horseStats[winnerId].odds);
+      balance += winAmt;
+      showMsg(`🎊 ${winnerId}號獲勝 🎊<br>贏得 $${winAmt.toLocaleString()}`);
+      if(!isMuted && isAudioUnlocked) { document.getElementById('sndWin').muted = false; document.getElementById('sndWin').play().catch(()=>{}); }
+      
+      // 寫入英雄榜
+      db.collection("horse_wins").add({
+          name: localStorage.getItem('player_name') || '無名騎士',
+          win: winAmt,
+          time: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else { showMsg(`${winnerId}號獲勝<br>`); }
+    
+    setTimeout(() => {
+      for(let i=1; i<=6; i++) { const el = document.getElementById('h'+i); el.style.left = '10px'; el.classList.remove('running', 'fatigued', 'my-horse'); }
+      isRacing = false; document.getElementById('goBtn').disabled = false;
+      document.getElementById('msgOverlay').style.display = 'none';
+      selectedHorse = null; generateNewOdds(); refreshOdds(); updateUI();
+    }, 3000);
+  }, 500);
+}
+
+function showMsg(text) { const overlay = document.getElementById('msgOverlay'); overlay.innerHTML = text; overlay.style.display = 'block'; }
+
+window.onload = () => { generateNewOdds(); refreshOdds(); updateUI(); applyHorseStyles(); listenRank(); };
+</script>
+</body>
+</html>
