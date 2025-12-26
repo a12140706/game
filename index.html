@@ -376,19 +376,43 @@
   }
 
   async function saveNewPlayer() {
-    const name = document.getElementById('nicknameInput').value.trim();
+    const nameInput = document.getElementById('nicknameInput');
+    const name = nameInput.value.trim();
     if (!name) return alert("請輸入名字！");
+
+    // 取得按鈕並暫時停用，避免重複點擊
+    const btn = document.querySelector('#nameModal .modal-btn');
+    if(btn) btn.disabled = true;
+
     const playerId = localStorage.getItem('player_id');
     const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
-    await db.collection("users").doc(playerId).set({
-      name: name,
-      balance: localBal,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    localStorage.setItem('player_name', name);
-    document.getElementById('nameModal').style.display = 'none';
-    document.getElementById('welcomeUser').textContent = `歡迎，${name}`;
-    updateMainBalance();
+
+    try {
+      // 1. 先存入 LocalStorage（確保本地功能立即正常）
+      localStorage.setItem('player_name', name);
+      localStorage.setItem('sicbo_balance', localBal);
+
+      // 2. 嘗試同步到 Firebase
+      await db.collection("users").doc(playerId).set({
+        name: name,
+        balance: localBal,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // 3. 成功後執行 UI 更新
+      document.getElementById('nameModal').style.display = 'none';
+      document.getElementById('welcomeUser').textContent = `歡迎，${name}`;
+      updateMainBalance();
+      
+    } catch (e) {
+      console.error("儲存失敗:", e);
+      // 【緊急處理】即使 Firebase 失敗，也讓玩家可以先進入遊戲（本地模式）
+      document.getElementById('nameModal').style.display = 'none';
+      document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
+      updateMainBalance();
+    } finally {
+      if(btn) btn.disabled = false;
+    }
   }
 
   window.onload = function() {
