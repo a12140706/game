@@ -803,28 +803,59 @@ async function syncToFirebase() {
             }
         }
 
-        function showRank() {
-            const modal = document.getElementById('rankModal');
-            const list = document.getElementById('rankList');
-            let ranks = JSON.parse(localStorage.getItem('heart_ranks')) || [];
-            
-            list.innerHTML = '';
-            if (ranks.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無紀錄</div>';
-            } else {
-                ranks.forEach((item, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'rank-item';
-                    row.innerHTML = `
-                        <span class="rank-no">#${index + 1}</span>
-                        <span class="rank-name">${item.name || '匿名'}</span>
-                        <span class="rank-val">💎 ${item.amount.toLocaleString()}</span>
-                    `;
-                    list.appendChild(row);
-                });
-            }
-            modal.style.display = 'flex';
+        async function showRank() {
+    const modal = document.getElementById('rankModal');
+    const list = document.getElementById('rankList');
+    
+    // 顯示讀取狀態
+    list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">載入全球排行中...</div>';
+    modal.style.display = 'flex';
+
+    try {
+        // 從 "users" 集合中，依照 "lastWin" 欄位由大到小排序，取前 10 名
+        const snapshot = await db.collection("users")
+                                 .orderBy("lastWin", "desc") 
+                                 .limit(10)
+                                 .get();
+
+        list.innerHTML = '';
+
+        if (snapshot.empty) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無紀錄</div>';
+            return;
         }
+
+        let index = 1;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // 只有當玩家有贏過錢 (lastWin > 0) 才顯示在榜單上
+            if (data.lastWin && data.lastWin > 0) {
+                const row = document.createElement('div');
+                row.className = 'rank-item'; // 套用你原本的 CSS
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.padding = '10px';
+                row.style.borderBottom = '1px solid #333';
+                
+                row.innerHTML = `
+                    <span class="rank-no">#${index}</span>
+                    <span class="rank-name" style="color:var(--btn-gold)">${data.name || '匿名'}</span>
+                    <span class="rank-val" style="color:#2ecc71">💎 ${Math.floor(data.lastWin).toLocaleString()}</span>
+                `;
+                list.appendChild(row);
+                index++;
+            }
+        });
+        
+        if (index === 1) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無得獎紀錄</div>';
+        }
+
+    } catch (error) {
+        console.error("排行讀取失敗:", error);
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4757;">連線失敗</div>';
+    }
+}
 
         function closeRank() {
             document.getElementById('rankModal').style.display = 'none';
