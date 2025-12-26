@@ -817,6 +817,7 @@ async function syncToFirebase() {
                     row.className = 'rank-item';
                     row.innerHTML = `
                         <span class="rank-no">#${index + 1}</span>
+                        <span class="rank-name">${item.name || '匿名'}</span>
                         <span class="rank-val">💎 ${item.amount.toLocaleString()}</span>
                     `;
                     list.appendChild(row);
