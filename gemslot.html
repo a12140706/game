@@ -71,7 +71,7 @@
   .spin-btn:disabled { background: #555; box-shadow: 0 2px 0 #333; color: #888; }
   .win-display { font-size: 22px; color: #2ecc71; font-weight: bold; min-width: 100px; text-align: center; }
 
-  /* 排行榜彈窗樣式 */
+  /* 排行榜彈窗 */
   .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; }
   .rank-list-container { width: 80%; max-width: 400px; max-height: 60%; overflow-y: auto; background: #1a1a1a; border-radius: 10px; border: 1px solid #333; }
 </style>
@@ -80,7 +80,7 @@
 <div class="portrait-tip"><div>🔄</div><p style="margin-top:20px;">請橫屏遊玩</p></div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑英雄榜</div>
+    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑英雄榜 (玩家最高紀錄)</div>
     <div class="rank-list-container" id="rankList"></div>
     <button class="sound-btn" style="margin-top:20px; padding:10px 30px; font-size:16px;" onclick="closeRank()">關閉</button>
 </div>
@@ -91,7 +91,7 @@
     <button class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</button>
   </div>
   <div style="background:linear-gradient(#b91c1c, #7f1d1d); border:1px solid var(--btn-gold); border-radius:20px; padding:5px 15px; cursor:pointer; display:flex; gap:8px; align-items:center; z-index:101;" onclick="openRank()">
-      <span style="font-size:12px; color:#fff; font-weight:bold;">🏆 最大獎:</span>
+      <span style="font-size:12px; color:#fff; font-weight:bold;">🏆 全服最高:</span>
       <span id="topWinnerName" style="font-size:13px; color:var(--btn-gold); font-weight:bold;">讀取中...</span>
   </div>
   <div class="stats-group">
@@ -163,20 +163,22 @@ const GEMS = ['💎','💰','💰','🔮','🔮','🍏','🍏','🏮','🏮','�
 const CRAZY_POOL = ['💎','💰','💰','🌟','🌟','🌟','✨','✨','✨','🪨','🪨','🪨','🪨','🪨','🪵','🪵','🪵','🪵','🪵','🔮','🔮','🍏','🍏','🏮','🏮','⛏️','⛏️','⛏️','⛏️','💣','💣','💣'];
 const GEM_VALUES = { '💎': 4, '💰': 2, '🔮': 2, '🍏': 2, '🏮': 2, '🌟': 1.5, '✨': 1.5, '⛏️': 1, '🪨': 0.5, '🪵': 0.5, '💣': 0 };
 
-// --- 排行榜監聽 ---
+// --- 排行榜監聽 (現在從 users 集合抓取 maxGemWin) ---
 function listenRank() {
-    db.collection("gem_wins").orderBy("win", "desc").limit(10).onSnapshot(snap => {
+    db.collection("users").where("maxGemWin", ">", 0).orderBy("maxGemWin", "desc").limit(10).onSnapshot(snap => {
         let html = '';
         let first = true;
         snap.forEach(doc => {
             const d = doc.data();
+            const displayName = d.name || '礦工';
+            const winVal = d.maxGemWin || 0;
             if(first) { 
-                document.getElementById('topWinnerName').innerText = `${d.name} $${Math.floor(d.win).toLocaleString()}`; 
+                document.getElementById('topWinnerName').innerText = `${displayName} $${Math.floor(winVal).toLocaleString()}`; 
                 first = false; 
             }
             html += `<div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #222; font-size:14px;">
-                <span style="color:var(--btn-gold)">${d.name}</span>
-                <span style="color:#2ecc71; font-weight:bold;">$${Math.floor(d.win).toLocaleString()}</span>
+                <span style="color:var(--btn-gold)">${displayName}</span>
+                <span style="color:#2ecc71; font-weight:bold;">$${Math.floor(winVal).toLocaleString()}</span>
             </div>`;
         });
         document.getElementById('rankList').innerHTML = html || '<div style="padding:20px; color:#666;">等待傳奇...</div>';
@@ -332,8 +334,9 @@ async function startSpin() {
             stillGoing = false;
         }
         
-        if (isCrazyMode && totalWinInThisTurn > 0) {
-            checkAndRecordRank(totalWinInThisTurn);
+        // 瘋狂模式結束後，檢查是否打破個人紀錄
+        if (totalWinInThisTurn > 0) {
+            updatePersonalMaxWin(totalWinInThisTurn);
         }
 
         let finalBombs = 0;
@@ -351,21 +354,29 @@ async function startSpin() {
     }
 }
 
-function checkAndRecordRank(winAmt) {
-    const rankLines = document.querySelectorAll('#rankList div');
-    let tenthPlaceScore = 0;
-    if (rankLines.length >= 10) {
-        const lastScoreText = rankLines[rankLines.length - 1].querySelector('span:last-child').textContent;
-        tenthPlaceScore = parseFloat(lastScoreText.replace(/[$,]/g, ''));
-    }
+// 核心改動：在 user 文件中更新最高紀錄
+async function updatePersonalMaxWin(winAmt) {
+    const playerId = localStorage.getItem('player_id');
+    if (!playerId || !db) return;
 
-    if (rankLines.length < 10 || winAmt > tenthPlaceScore) {
-        db.collection("gem_wins").add({
-            name: localStorage.getItem('player_name') || '幸運兒',
-            win: winAmt,
-            time: firebase.firestore.FieldValue.serverTimestamp()
+    const userRef = db.collection("users").doc(playerId);
+    
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists) return;
+
+            const currentMax = userDoc.data().maxGemWin || 0;
+            // 只有當本次獎金大於雲端紀錄，才進行更新
+            if (winAmt > currentMax) {
+                transaction.update(userRef, {
+                    maxGemWin: winAmt,
+                    maxWinTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("打破個人最高紀錄！");
+            }
         });
-    }
+    } catch (e) { console.error("紀錄更新失敗", e); }
 }
 
 async function fillGrid(isInitial) {
