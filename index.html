@@ -344,21 +344,19 @@
   async function checkUserStatus() {
     let playerId = localStorage.getItem('player_id');
     
-    // 1. 如果完全沒有 ID (第一次登入)，直接顯示輸入框並結束，不跑後續 Firebase 查詢
+    // 如果沒有 ID，立刻生一個存起來，防止後面 doc() 路徑為空
     if (!playerId) {
+      playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
+      localStorage.setItem('player_id', playerId);
       document.getElementById('nameModal').style.display = 'flex';
-      return; 
+      return;
     }
 
     try {
-      const userRef = db.collection("users").doc(playerId);
-      const doc = await userRef.get();
-      
-      // 2. 如果有 ID 但雲端找不到資料 (例如資料庫重置過)
-      if (!doc.exists()) {
+      const doc = await db.collection("users").doc(playerId).get();
+      if (!doc.exists) {
         document.getElementById('nameModal').style.display = 'flex';
       } else {
-        // 3. 正常登入
         const cloudData = doc.data();
         localStorage.setItem('player_name', cloudData.name);
         localStorage.setItem('sicbo_balance', cloudData.balance);
@@ -367,7 +365,6 @@
       }
     } catch (e) {
       console.error("Firebase 連線失敗", e);
-      // 網路異常時，如果本地也沒暱稱，還是要讓玩家輸入
       if (!localStorage.getItem('player_name')) {
         document.getElementById('nameModal').style.display = 'flex';
       }
@@ -375,50 +372,39 @@
     }
   }
 
+  // --- 關鍵修復：儲存暱稱 ---
   async function saveNewPlayer() {
-    const nameInput = document.getElementById('nicknameInput');
-    const name = nameInput.value.trim();
+    const name = document.getElementById('nicknameInput').value.trim();
     if (!name) return alert("請輸入名字！");
 
-    // 取得按鈕並暫時停用
-    const btn = document.querySelector('#nameModal .modal-btn');
-    if(btn) btn.disabled = true;
-
-    // --- 核心修正：確保 ID 不會是空的 ---
     let playerId = localStorage.getItem('player_id');
+    // 二次防護：如果點擊按鈕時萬一沒 ID，現場再補一個
     if (!playerId) {
       playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
       localStorage.setItem('player_id', playerId);
     }
-    // ----------------------------------
 
     const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
 
     try {
-      // 1. 先存入本地，確保萬一網路斷掉，重新整理後 ID 還在
       localStorage.setItem('player_name', name);
       localStorage.setItem('sicbo_balance', localBal);
 
-      // 2. 嘗試同步到 Firebase (此時 playerId 保證有值)
+      // 執行 Firebase 寫入
       await db.collection("users").doc(playerId).set({
         name: name,
         balance: localBal,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // 3. 成功後執行 UI 更新
       document.getElementById('nameModal').style.display = 'none';
       document.getElementById('welcomeUser').textContent = `歡迎，${name}`;
       updateMainBalance();
-      
     } catch (e) {
       console.error("儲存失敗:", e);
-      // 即使 Firebase 報錯，也要讓視窗關閉，否則玩家會卡死
+      // 就算失敗也要關掉視窗讓玩家能進去
       document.getElementById('nameModal').style.display = 'none';
-      document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
       updateMainBalance();
-    } finally {
-      if(btn) btn.disabled = false;
     }
   }
 
