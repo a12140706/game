@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<title>寶石礦坑</title>
+<style>
+  :root {
+    --bg-dark: #1a0f0f; --btn-gold: #ffbe0b; --text-light: #fefefe;
+    --game-width: 80vw; --game-height: 70vh; --grid-size: 5;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; touch-action: manipulation; font-family: "Microsoft JhengHei", Arial, sans-serif; }
+  body { 
+    height: 100dvh; width: 100vw; overflow: hidden; background: var(--bg-dark); color: var(--text-light);
+    display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+  }
+  
+  /* 轉向提示 */
+  @media (orientation: portrait) {
+    .portrait-tip {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+      background: #1a0505; z-index: 9999; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center; color: #fff; font-size: 24px;
+    }
+  }
+  @media (orientation: landscape) { .portrait-tip { display: none; } }
+
+  /* UI 框架 */
+  .top-bar {
+    width: 100%; height: 60px; background: linear-gradient(#4a0404, #2a0202);
+    display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #5c0a0a;
+  }
+  .sound-controls { display: flex; gap: 8px; }
+  .sound-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid var(--btn-gold);
+    color: #fff; padding: 4px 8px; border-radius: 8px; font-size: 12px; cursor: pointer;
+  }
+  
+  .stats-group { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .balance-display { background: rgba(0,0,0,0.4); border: 1px solid var(--btn-gold); border-radius: 8px; padding: 3px 10px; font-weight: bold; color: var(--btn-gold); font-size: 16px; }
+  
+  /* 未開局數顯示樣式 */
+  .miss-display { font-size: 10px; color: #aaa; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
+  .miss-display span { color: #ff4757; font-weight: bold; font-size: 12px; margin-left: 4px; }
+  .miss-flash { animation: flashRed 0.5s 3; }
+  @keyframes flashRed { 50% { color: #fff; transform: scale(1.1); } }
+
+  .game-area { display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; width: var(--game-width); position: relative; }
+  .gem-grid {
+    display: grid; grid-template-columns: repeat(var(--grid-size), 1fr); grid-template-rows: repeat(var(--grid-size), 1fr);
+    gap: 2px; background: rgba(0,0,0,0.5); border: 5px solid #3d2b0e; border-radius: 10px;
+    width: min(calc(var(--game-height) * 0.9), var(--game-width) * 0.7); aspect-ratio: 1 / 1; max-width: 500px; overflow: hidden;
+  }
+  .grid-cell { background: #2b1f0d; display: flex; justify-content: center; align-items: center; font-size: clamp(20px, 5vw, 40px); border-radius: 3px; position: relative; }
+  
+  .gem { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: inherit; will-change: transform, opacity; }
+  .gem.dropping { transform: translateY(-100%); transition: none; }
+  .gem.dropped { transform: translateY(0); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+  .gem.vanishing { animation: vanish 0.4s ease-out forwards; pointer-events: none; }
+  @keyframes vanish { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+
+  .message-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); border: 2px solid var(--btn-gold); border-radius: 10px; padding: 15px 25px; font-size: 20px; font-weight: bold; z-index: 100; display: none; text-align: center; }
+
+  .bottom-bar { width: 100%; height: 80px; background: linear-gradient(#333, #111); display: flex; justify-content: center; align-items: center; gap: 20px; border-top: 2px solid #555; padding-bottom: env(safe-area-inset-bottom); }
+  .bet-control { display: flex; align-items: center; background: rgba(0,0,0,0.4); border-radius: 50px; border: 1px solid #555; padding: 2px 10px; }
+  .bet-btn { background: none; border: none; color: var(--btn-gold); font-size: 28px; padding: 0 10px; cursor: pointer; }
+  .auto-btn { background: #333; color: #fff; border: 2px solid #777; padding: 10px 15px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+  .auto-active { background: #2ecc71; border-color: #fff; color: #000; box-shadow: 0 0 10px #2ecc71; }
+  .spin-btn { background: var(--btn-gold); color: #000; font-size: 24px; font-weight: bold; padding: 10px 30px; border-radius: 15px; border: none; cursor: pointer; box-shadow: 0 5px 0 #b38b00; }
+  .spin-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #b38b00; }
+  .spin-btn:disabled { background: #555; box-shadow: 0 2px 0 #333; color: #888; }
+  .win-display { font-size: 22px; color: #2ecc71; font-weight: bold; min-width: 100px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="portrait-tip"><div>🔄</div><p style="margin-top:20px;">請橫屏遊玩</p></div>
+
+<div class="top-bar">
+  <div class="sound-controls">
+    <button class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</button>
+    <button class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</button>
+  </div>
+  <div class="stats-group">
+    <div class="balance-display">💎 <span id="balanceText">----</span></div>
+  </div>
+  <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 回大廳</button></a>
+</div>
+<div style="background:linear-gradient(#b91c1c, #7f1d1d); border:1px solid var(--btn-gold); border-radius:20px; padding:2px 12px; cursor:pointer; display:flex; gap:5px; align-items:center;" onclick="openRank()">
+      <span style="font-size:10px;">🏆 最大獎得主:</span>
+      <span id="topWinnerName" style="font-size:12px; color:var(--btn-gold); font-weight:bold;">讀取中...</span>
+  </div>
+<div class="game-area">
+  <div class="gem-grid" id="gemGrid"></div>
+  <div class="message-box" id="messageBox"></div>
+</div>
+
+<div class="bottom-bar">
+  <div class="bet-control">
+    <button class="bet-btn" onclick="changeBet(-1)">◀</button>
+    <div id="betDisplay" style="font-size: 20px; color: var(--btn-gold); font-weight: bold; min-width: 60px; text-align: center;">$1000</div>
+    <button class="bet-btn" onclick="changeBet(1)">▶</button>
+  </div>
+  <button id="autoBtn" class="auto-btn" onclick="toggleAuto()">自動玩</button>
+  <button class="spin-btn" id="spinBtn" onclick="startSpin()">拉吧</button>
+  <div class="win-display">WIN: <span id="winAmount">0</span></div>
+  <div class="miss-display">未開：<span id="missCountText">0</span> 局</div>
+</div>
+
+<audio id="sndSpin" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3" preload="none"></audio>
+<audio id="sndWin" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="none"></audio>
+<audio id="sndExplode" src="https://assets.mixkit.co/active_storage/sfx/1461/1461-preview.mp3" preload="none"></audio>
+<audio id="bgm1" src="background-music-434612.mp3" loop preload="none"></audio>
+<audio id="bgm2" src="soft-background-music-427252.mp3" loop preload="none"></audio>
+<audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop preload="none"></audio>
+<audio id="bgmCrazy" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" loop preload="none"></audio>
+
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
+
+<script>
+// --- Firebase 初始化 ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+    authDomain: "game-80d68.firebaseapp.com",
+    projectId: "game-80d68",
+    storageBucket: "game-80d68.firebasestorage.app",
+    messagingSenderId: "636332967920",
+    appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+    measurementId: "G-MJZ4PGEHSQ"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// --- 核心變數 ---
+let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+let missCount = parseInt(localStorage.getItem('gem_crazy_miss')) || 0;
+let isSpinning = false;
+let isMuted = false;
+let isCrazyMode = false;
+let isAuto = false;
+let currentBgmIdx = 1;
+let isAudioUnlocked = false; 
+let lastWin = 0;
+const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+const betOptions = [500, 1000, 3000, 5000, 10000, 50000];
+let currentBetIdx = 1;
+let currentBet = betOptions[currentBetIdx];
+const GRID_SIZE = 5;
+let grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+
+const GEMS = ['💎','💰','💰','🔮','🔮','🍏','🍏','🏮','🏮','🌟','🌟','🌟','✨','✨','✨','⛏️','⛏️','⛏️','⛏️','🪨','🪨','🪨','🪨','🪵','🪵','🪵','🪵','💣'];
+const CRAZY_POOL = ['💎','💰','💰','🌟','🌟','🌟','✨','✨','✨','🪨','🪨','🪨','🪨','🪨','🪵','🪵','🪵','🪵','🪵','🔮','🔮','🍏','🍏','🏮','🏮','⛏️','⛏️','⛏️','⛏️','💣','💣','💣'];
+const GEM_VALUES = { '💎': 4, '💰': 2, '🔮': 2, '🍏': 2, '🏮': 2, '🌟': 1.5, '✨': 1.5, '⛏️': 1, '🪨': 0.5, '🪵': 0.5, '💣': 0 };
+
+// --- 排行榜監聽 ---
+function listenRank() {
+    db.collection("gem_wins").orderBy("win", "desc").limit(10).onSnapshot(snap => {
+        let html = '';
+        let first = true;
+        snap.forEach(doc => {
+            const d = doc.data();
+            if(first) { document.getElementById('topWinnerName').innerText = d.name; first = false; }
+            html += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #222; font-size:14px;">
+                <span style="color:var(--btn-gold)">${d.name}</span>
+                <span style="color:#2ecc71; font-weight:bold;">$${Math.floor(d.win).toLocaleString()}</span>
+            </div>`;
+        });
+        document.getElementById('rankList').innerHTML = html || '<div style="padding:20px; color:#666;">等待傳奇...</div>';
+    });
+}
+function openRank() { document.getElementById('rankModal').style.display = 'flex'; }
+function closeRank() { document.getElementById('rankModal').style.display = 'none'; }
+
+// --- 數據同步邏輯 ---
+async function saveData() {
+    localStorage.setItem('sicbo_balance', balance);
+    localStorage.setItem('gem_crazy_miss', missCount);
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) { console.warn("同步延遲"); }
+    }
+}
+
+async function syncAndRedirect(url) {
+    await saveData();
+    window.location.href = url;
+}
+
+function updateUI() {
+    currentBet = betOptions[currentBetIdx];
+    document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
+    document.getElementById('winAmount').textContent = Math.floor(lastWin).toLocaleString();
+    document.getElementById('betDisplay').textContent = "$" + currentBet;
+    document.getElementById('missCountText').textContent = missCount;
+}
+
+// --- 初始化 ---
+window.onload = async () => {
+    const gridEl = document.getElementById('gemGrid');
+    if (gridEl) {
+        gridEl.innerHTML = '';
+        for(let r=0; r<GRID_SIZE; r++) {
+            for(let c=0; c<GRID_SIZE; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell'; cell.id = `cell-${r}-${c}`;
+                gridEl.appendChild(cell);
+            }
+        }
+    }
+    fillGrid(true);
+    listenRank(); // 啟動排行榜監聽
+
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                } else if (cloudBal !== undefined && balance > cloudBal) {
+                    saveData();
+                }
+            }
+        } catch (e) { console.log("離線模式"); }
+    }
+    updateUI();
+
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                syncAndRedirect(href);
+            }
+        });
+    });
+};
+
+window.addEventListener('pagehide', saveData);
+
+// --- 遊戲邏輯 ---
+async function startSpin() {
+    if (isSpinning) return;
+    if (!isCrazyMode && balance < currentBet) { showMessage("牟吉阿"); if (isAuto) toggleAuto(); return; }
+    
+    if (!isCrazyMode) {
+        balance -= currentBet;
+        missCount++; 
+        saveData();
+    }
+
+    isSpinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    let totalWinInThisTurn = 0;
+    updateUI();
+
+    try {
+        if(!isMuted && isAudioUnlocked) document.getElementById('sndSpin').play().catch(()=>{});
+        await fillGrid(true);
+        let stillGoing = true;
+        while (stillGoing) {
+            let currentBombs = 0;
+            grid.forEach(row => row.forEach(cell => { if(cell === '💣') currentBombs++; }));
+            
+            if (currentBombs >= 3 && !isCrazyMode) {
+                isCrazyMode = true;
+                missCount = 0;
+                document.getElementById('missCountText').classList.add('miss-flash');
+                setTimeout(() => document.getElementById('missCountText').classList.remove('miss-flash'), 2000);
+                document.body.style.background = "#4a0404";
+                showMessage("🚨 進入瘋狂模式！ 🚨");
+                stopAllBGM();
+                if (!isMuted && isAudioUnlocked) { const cb = document.getElementById('bgmCrazy'); cb.volume = 0.4; cb.play().catch(()=>{}); }
+                saveData(); 
+            }
+
+            let matches = findMatches();
+            if (matches.length > 0) {
+                let win = calculateWin(matches);
+                totalWinInThisTurn += win; lastWin = totalWinInThisTurn;
+                balance += win; updateUI();
+                if(!isMuted && isAudioUnlocked) document.getElementById('sndWin').cloneNode().play().catch(()=>{});
+                await eliminate(matches); await drop(); await fillGrid(false);
+                continue;
+            }
+            let bombResult = await explodeBombs();
+            if (bombResult.exploded) {
+                totalWinInThisTurn += bombResult.win; lastWin = totalWinInThisTurn;
+                balance += bombResult.win; updateUI();
+                await drop(); await fillGrid(false);
+                continue;
+            }
+            stillGoing = false;
+        }
+        
+        // --- 瘋狂模式結算：檢查是否進榜 ---
+        if (isCrazyMode && totalWinInThisTurn > 0) {
+            checkAndRecordRank(totalWinInThisTurn);
+        }
+
+        let finalBombs = 0;
+        grid.forEach(row => row.forEach(cell => { if(cell === '💣') finalBombs++; }));
+        if (isCrazyMode && finalBombs === 0) {
+            isCrazyMode = false; document.body.style.background = "#1a0f0f";
+            showMessage("礦坑已經冷卻"); stopAllBGM();
+            if (!isMuted && isAudioUnlocked && currentBgmIdx !== 0) {
+                const b = document.getElementById(bgmList[currentBgmIdx]);
+                if (b) { b.volume = 0.3; b.play().catch(()=>{}); }
+            }
+        }
+    } finally {
+        isSpinning = false; document.getElementById('spinBtn').disabled = false;
+        saveData(); 
+        updateUI();
+        if (isCrazyMode || isAuto) setTimeout(() => { if (!isSpinning) startSpin(); }, 800);
+    }
+}
+
+// 檢查並紀錄排行 (節省 API 次數：僅贏過第十名才寫入)
+function checkAndRecordRank(winAmt) {
+    const rankLines = document.querySelectorAll('#rankList div');
+    let tenthPlaceScore = 0;
+    if (rankLines.length >= 10) {
+        const lastScoreText = rankLines[rankLines.length - 1].querySelector('span:last-child').textContent;
+        tenthPlaceScore = parseFloat(lastScoreText.replace(/[$,]/g, ''));
+    }
+
+    if (rankLines.length < 10 || winAmt > tenthPlaceScore) {
+        db.collection("gem_wins").add({
+            name: localStorage.getItem('player_name') || '無名礦工',
+            win: winAmt,
+            time: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+}
+
+async function fillGrid(isInitial) {
+    const pool = isCrazyMode ? CRAZY_POOL : GEMS;
+    if(isInitial) {
+        for(let r=0; r<GRID_SIZE; r++) for(let c=0; c<GRID_SIZE; c++) {
+            grid[r][c] = null; 
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if (cell) cell.innerHTML = '';
+        }
+    }
+    for (let c = 0; c < GRID_SIZE; c++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
+            if (grid[r][c] === null) {
+                let type = pool[Math.floor(Math.random() * pool.length)];
+                grid[r][c] = type;
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                if (cell) {
+                    cell.innerHTML = `<div class="gem dropping">${type}</div>`;
+                    const gem = cell.firstChild;
+                    gem.offsetWidth; 
+                    gem.classList.remove('dropping'); gem.classList.add('dropped');
+                }
+            }
+        }
+    }
+    await wait(350);
+}
+
+async function eliminate(matches) {
+    matches.forEach(m => {
+        const cell = document.getElementById(`cell-${m.r}-${m.c}`);
+        if(cell && cell.firstChild) cell.firstChild.classList.add('vanishing');
+        grid[m.r][m.c] = null;
+    });
+    await wait(350);
+}
+
+async function explodeBombs() {
+    let bombs = [];
+    grid.forEach((row, r) => row.forEach((type, c) => { if(type === '💣') bombs.push({r, c}); }));
+    if (bombs.length === 0) return { exploded: false };
+    if(!isMuted && isAudioUnlocked) document.getElementById('sndExplode').cloneNode().play().catch(()=>{});
+    let win = 0; let targets = new Set();
+    bombs.forEach(b => {
+        for(let i=b.r-1; i<=b.r+1; i++) for(let j=b.c-1; j<=b.c+1; j++) {
+            if(i>=0 && i<GRID_SIZE && j>=0 && j<GRID_SIZE) {
+                targets.add(`${i},${j}`);
+                if(isCrazyMode && grid[i][j] && grid[i][j]!=='💣') win += currentBet * (GEM_VALUES[grid[i][j]] || 0.1) * 0.02;
+            }
+        }
+    });
+    targets.forEach(t => {
+        let [r, c] = t.split(',').map(Number);
+        const cell = document.getElementById(`cell-${r}-${c}`);
+        if(cell && cell.firstChild) cell.firstChild.classList.add('vanishing');
+        grid[r][c] = null;
+    });
+    await wait(350);
+    return { exploded: true, win };
+}
+
+async function drop() {
+    for (let c = 0; c < GRID_SIZE; c++) {
+        let empty = 0;
+        for (let r = GRID_SIZE - 1; r >= 0; r--) {
+            if (grid[r][c] === null) empty++;
+            else if (empty > 0) {
+                grid[r + empty][c] = grid[r][c]; grid[r][c] = null;
+                const oldCell = document.getElementById(`cell-${r}-${c}`);
+                const newCell = document.getElementById(`cell-${r+empty}-${c}`);
+                if (oldCell && newCell) {
+                    newCell.innerHTML = oldCell.innerHTML; oldCell.innerHTML = '';
+                }
+            }
+        }
+    }
+    await wait(300);
+}
+
+function findMatches() {
+    let matched = [];
+    for(let r=0; r<GRID_SIZE; r++) for(let c=0; c<GRID_SIZE-2; c++) {
+        if(grid[r][c] && grid[r][c]!=='💣' && grid[r][c]==grid[r][c+1] && grid[r][c]==grid[r][c+2]) matched.push({r,c}, {r,c:c+1}, {r,c:c+2});
+    }
+    for(let c=0; c<GRID_SIZE; c++) for(let r=0; r<GRID_SIZE-2; r++) {
+        if(grid[r][c] && grid[r][c]!=='💣' && grid[r][c]==grid[r+1][c] && grid[r][c]==grid[r+2][c]) matched.push({r,c}, {r:r+1,c}, {r:r+2,c});
+    }
+    const unique = []; const seen = new Set();
+    matched.forEach(m => { const k = `${m.r}-${m.c}`; if(!seen.has(k)){ unique.push(m); seen.add(k); }});
+    return unique;
+}
+
+function calculateWin(matches) {
+    let win = 0; let counts = {};
+    matches.forEach(m => { let t = grid[m.r][m.c]; if(t) counts[t] = (counts[t]||0)+1; });
+    for(let t in counts) {
+        const c = counts[t]; const base = GEM_VALUES[t] || 1;
+        let mult = c >= 5 ? 2 : (c === 4 ? 1 : 0.5);
+        win += currentBet * base * mult;
+    }
+    return win;
+}
+
+function showMessage(msg) { const b = document.getElementById('messageBox'); b.innerText = msg; b.style.display = 'block'; setTimeout(()=> b.style.display = 'none', 1800); }
+function toggleAuto() { isAuto = !isAuto; document.getElementById('autoBtn').classList.toggle('auto-active', isAuto); if(isAuto && !isSpinning) startSpin(); }
+function changeBet(dir) { if (isSpinning) return; currentBetIdx = Math.max(0, Math.min(betOptions.length - 1, currentBetIdx + dir)); updateUI(); }
+</script>
+</body>
+</html>
