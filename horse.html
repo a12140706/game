@@ -85,7 +85,11 @@
   .chip-area { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
   .chip { width: 45px; height: 45px; border-radius: 50%; border: 2px dashed #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; background: #444; color: #fff; cursor: pointer; }
   .chip.active { transform: scale(1.1); border-style: solid; border-color: var(--gold); background: #856404; box-shadow: 0 0 10px var(--gold); }
-
+/* 補回各面額顏色 */
+.chip-500 { background: #2ecc71; }   /* 綠色 */
+.chip-1000 { background: #3498db; }  /* 藍色 */
+.chip-5000 { background: #9b59b6; }  /* 紫色 */
+.chip-allin { background: #e67e22; } /* 橘色 */
   .bet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 1; }
   .bet-btn { background: #333; border: 2px solid #555; border-radius: 10px; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
   .bet-btn span { color: var(--gold); font-size: 10px; }
@@ -116,7 +120,7 @@
 </div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--gold); font-size:18px; margin-bottom:10px; font-weight:bold;">🏆 賽馬大獎英雄榜</div>
+    <div style="color:var(--gold); font-size:18px; margin-bottom:10px; font-weight:bold;">🏆 賽馬大獎榜</div>
     <div class="rank-list" id="rankList"></div>
     <button class="sound-btn" style="margin-top:15px; padding:8px 25px;" onclick="closeRank()">返回遊戲</button>
 </div>
@@ -125,7 +129,7 @@
   <div class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</div>
   <div class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
   <div class="balance-box">💎 <span id="balanceText">0</span></div>
-  <marquee style="flex:1; color:var(--gold); font-size: 12px;">賽馬即將開跑，請各位馬友準時下注</marquee>
+  <marquee style="flex:1; color:var(--gold); font-size: 12px;">有問題再說</marquee>
   <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 大廳</button></a>
 </div>
 
