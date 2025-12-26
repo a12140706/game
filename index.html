@@ -380,19 +380,26 @@
     const name = nameInput.value.trim();
     if (!name) return alert("請輸入名字！");
 
-    // 取得按鈕並暫時停用，避免重複點擊
+    // 取得按鈕並暫時停用
     const btn = document.querySelector('#nameModal .modal-btn');
     if(btn) btn.disabled = true;
 
-    const playerId = localStorage.getItem('player_id');
+    // --- 核心修正：確保 ID 不會是空的 ---
+    let playerId = localStorage.getItem('player_id');
+    if (!playerId) {
+      playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
+      localStorage.setItem('player_id', playerId);
+    }
+    // ----------------------------------
+
     const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
 
     try {
-      // 1. 先存入 LocalStorage（確保本地功能立即正常）
+      // 1. 先存入本地，確保萬一網路斷掉，重新整理後 ID 還在
       localStorage.setItem('player_name', name);
       localStorage.setItem('sicbo_balance', localBal);
 
-      // 2. 嘗試同步到 Firebase
+      // 2. 嘗試同步到 Firebase (此時 playerId 保證有值)
       await db.collection("users").doc(playerId).set({
         name: name,
         balance: localBal,
@@ -406,7 +413,7 @@
       
     } catch (e) {
       console.error("儲存失敗:", e);
-      // 【緊急處理】即使 Firebase 失敗，也讓玩家可以先進入遊戲（本地模式）
+      // 即使 Firebase 報錯，也要讓視窗關閉，否則玩家會卡死
       document.getElementById('nameModal').style.display = 'none';
       document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
       updateMainBalance();
