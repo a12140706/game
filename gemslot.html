@@ -29,7 +29,7 @@
   /* UI 框架 */
   .top-bar {
     width: 100%; height: 60px; background: linear-gradient(#4a0404, #2a0202);
-    display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #5c0a0a;
+    display: flex; justify-content: space-between; align-items: center; padding: 0 15px; border-bottom: 2px solid #5c0a0a; z-index: 100;
   }
   .sound-controls { display: flex; gap: 8px; }
   .sound-btn {
@@ -40,7 +40,6 @@
   .stats-group { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .balance-display { background: rgba(0,0,0,0.4); border: 1px solid var(--btn-gold); border-radius: 8px; padding: 3px 10px; font-weight: bold; color: var(--btn-gold); font-size: 16px; }
   
-  /* 未開局數顯示樣式 */
   .miss-display { font-size: 10px; color: #aaa; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
   .miss-display span { color: #ff4757; font-weight: bold; font-size: 12px; margin-left: 4px; }
   .miss-flash { animation: flashRed 0.5s 3; }
@@ -71,25 +70,36 @@
   .spin-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #b38b00; }
   .spin-btn:disabled { background: #555; box-shadow: 0 2px 0 #333; color: #888; }
   .win-display { font-size: 22px; color: #2ecc71; font-weight: bold; min-width: 100px; text-align: center; }
+
+  /* 排行榜彈窗樣式 */
+  .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; }
+  .rank-list-container { width: 80%; max-width: 400px; max-height: 60%; overflow-y: auto; background: #1a1a1a; border-radius: 10px; border: 1px solid #333; }
 </style>
 </head>
 <body>
 <div class="portrait-tip"><div>🔄</div><p style="margin-top:20px;">請橫屏遊玩</p></div>
+
+<div id="rankModal" class="modal">
+    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑英雄榜</div>
+    <div class="rank-list-container" id="rankList"></div>
+    <button class="sound-btn" style="margin-top:20px; padding:10px 30px; font-size:16px;" onclick="closeRank()">關閉</button>
+</div>
 
 <div class="top-bar">
   <div class="sound-controls">
     <button class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</button>
     <button class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</button>
   </div>
+  <div style="background:linear-gradient(#b91c1c, #7f1d1d); border:1px solid var(--btn-gold); border-radius:20px; padding:5px 15px; cursor:pointer; display:flex; gap:8px; align-items:center; z-index:101;" onclick="openRank()">
+      <span style="font-size:12px; color:#fff; font-weight:bold;">🏆 最大獎:</span>
+      <span id="topWinnerName" style="font-size:13px; color:var(--btn-gold); font-weight:bold;">讀取中...</span>
+  </div>
   <div class="stats-group">
     <div class="balance-display">💎 <span id="balanceText">----</span></div>
+    <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 回大廳</button></a>
   </div>
-  <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 回大廳</button></a>
 </div>
-<div style="background:linear-gradient(#b91c1c, #7f1d1d); border:1px solid var(--btn-gold); border-radius:20px; padding:2px 12px; cursor:pointer; display:flex; gap:5px; align-items:center;" onclick="openRank()">
-      <span style="font-size:10px;">🏆 最大獎得主:</span>
-      <span id="topWinnerName" style="font-size:12px; color:var(--btn-gold); font-weight:bold;">讀取中...</span>
-  </div>
+
 <div class="game-area">
   <div class="gem-grid" id="gemGrid"></div>
   <div class="message-box" id="messageBox"></div>
@@ -102,7 +112,7 @@
     <button class="bet-btn" onclick="changeBet(1)">▶</button>
   </div>
   <button id="autoBtn" class="auto-btn" onclick="toggleAuto()">自動玩</button>
-  <button class="spin-btn" id="spinBtn" onclick="startSpin()">拉吧</button>
+  <button class="spin-btn" id="spinBtn" onclick="handleFirstClick(); startSpin();">拉吧</button>
   <div class="win-display">WIN: <span id="winAmount">0</span></div>
   <div class="miss-display">未開：<span id="missCountText">0</span> 局</div>
 </div>
@@ -140,7 +150,7 @@ let isMuted = false;
 let isCrazyMode = false;
 let isAuto = false;
 let currentBgmIdx = 1;
-let isAudioUnlocked = false; 
+let hasInteracted = false; 
 let lastWin = 0;
 const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
 const betOptions = [500, 1000, 3000, 5000, 10000, 50000];
@@ -160,8 +170,11 @@ function listenRank() {
         let first = true;
         snap.forEach(doc => {
             const d = doc.data();
-            if(first) { document.getElementById('topWinnerName').innerText = d.name; first = false; }
-            html += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #222; font-size:14px;">
+            if(first) { 
+                document.getElementById('topWinnerName').innerText = `${d.name} $${Math.floor(d.win).toLocaleString()}`; 
+                first = false; 
+            }
+            html += `<div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #222; font-size:14px;">
                 <span style="color:var(--btn-gold)">${d.name}</span>
                 <span style="color:#2ecc71; font-weight:bold;">$${Math.floor(d.win).toLocaleString()}</span>
             </div>`;
@@ -214,7 +227,7 @@ window.onload = async () => {
         }
     }
     fillGrid(true);
-    listenRank(); // 啟動排行榜監聽
+    listenRank();
 
     const playerId = localStorage.getItem('player_id');
     if (playerId && db) {
@@ -245,10 +258,30 @@ window.onload = async () => {
 
 window.addEventListener('pagehide', saveData);
 
+function handleFirstClick() { if (!hasInteracted) { hasInteracted = true; playBGM(); } }
+
+function playBGM() {
+    if (isMuted || !hasInteracted) return;
+    stopAllBGM();
+    if (isCrazyMode) {
+        const cb = document.getElementById('bgmCrazy');
+        cb.volume = 0.4; cb.play().catch(()=>{});
+    } else {
+        const track = document.getElementById(bgmList[currentBgmIdx]);
+        if (track) { track.volume = 0.3; track.play().catch(()=>{}); }
+    }
+}
+
+function stopAllBGM() {
+    ['bgm1', 'bgm2', 'bgm3', 'bgmCrazy'].forEach(id => {
+        const a = document.getElementById(id); if(a){ a.pause(); a.currentTime = 0; }
+    });
+}
+
 // --- 遊戲邏輯 ---
 async function startSpin() {
     if (isSpinning) return;
-    if (!isCrazyMode && balance < currentBet) { showMessage("牟吉阿"); if (isAuto) toggleAuto(); return; }
+    if (!isCrazyMode && balance < currentBet) { showMessage("餘額不足"); if (isAuto) toggleAuto(); return; }
     
     if (!isCrazyMode) {
         balance -= currentBet;
@@ -262,7 +295,7 @@ async function startSpin() {
     updateUI();
 
     try {
-        if(!isMuted && isAudioUnlocked) document.getElementById('sndSpin').play().catch(()=>{});
+        if(!isMuted && hasInteracted) document.getElementById('sndSpin').play().catch(()=>{});
         await fillGrid(true);
         let stillGoing = true;
         while (stillGoing) {
@@ -276,8 +309,7 @@ async function startSpin() {
                 setTimeout(() => document.getElementById('missCountText').classList.remove('miss-flash'), 2000);
                 document.body.style.background = "#4a0404";
                 showMessage("🚨 進入瘋狂模式！ 🚨");
-                stopAllBGM();
-                if (!isMuted && isAudioUnlocked) { const cb = document.getElementById('bgmCrazy'); cb.volume = 0.4; cb.play().catch(()=>{}); }
+                playBGM();
                 saveData(); 
             }
 
@@ -286,7 +318,7 @@ async function startSpin() {
                 let win = calculateWin(matches);
                 totalWinInThisTurn += win; lastWin = totalWinInThisTurn;
                 balance += win; updateUI();
-                if(!isMuted && isAudioUnlocked) document.getElementById('sndWin').cloneNode().play().catch(()=>{});
+                if(!isMuted && hasInteracted) document.getElementById('sndWin').cloneNode().play().catch(()=>{});
                 await eliminate(matches); await drop(); await fillGrid(false);
                 continue;
             }
@@ -300,7 +332,6 @@ async function startSpin() {
             stillGoing = false;
         }
         
-        // --- 瘋狂模式結算：檢查是否進榜 ---
         if (isCrazyMode && totalWinInThisTurn > 0) {
             checkAndRecordRank(totalWinInThisTurn);
         }
@@ -309,11 +340,8 @@ async function startSpin() {
         grid.forEach(row => row.forEach(cell => { if(cell === '💣') finalBombs++; }));
         if (isCrazyMode && finalBombs === 0) {
             isCrazyMode = false; document.body.style.background = "#1a0f0f";
-            showMessage("礦坑已經冷卻"); stopAllBGM();
-            if (!isMuted && isAudioUnlocked && currentBgmIdx !== 0) {
-                const b = document.getElementById(bgmList[currentBgmIdx]);
-                if (b) { b.volume = 0.3; b.play().catch(()=>{}); }
-            }
+            showMessage("冷卻中...");
+            playBGM();
         }
     } finally {
         isSpinning = false; document.getElementById('spinBtn').disabled = false;
@@ -323,7 +351,6 @@ async function startSpin() {
     }
 }
 
-// 檢查並紀錄排行 (節省 API 次數：僅贏過第十名才寫入)
 function checkAndRecordRank(winAmt) {
     const rankLines = document.querySelectorAll('#rankList div');
     let tenthPlaceScore = 0;
@@ -334,7 +361,7 @@ function checkAndRecordRank(winAmt) {
 
     if (rankLines.length < 10 || winAmt > tenthPlaceScore) {
         db.collection("gem_wins").add({
-            name: localStorage.getItem('player_name') || '無名礦工',
+            name: localStorage.getItem('player_name') || '幸運兒',
             win: winAmt,
             time: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -368,6 +395,8 @@ async function fillGrid(isInitial) {
     await wait(350);
 }
 
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 async function eliminate(matches) {
     matches.forEach(m => {
         const cell = document.getElementById(`cell-${m.r}-${m.c}`);
@@ -381,7 +410,7 @@ async function explodeBombs() {
     let bombs = [];
     grid.forEach((row, r) => row.forEach((type, c) => { if(type === '💣') bombs.push({r, c}); }));
     if (bombs.length === 0) return { exploded: false };
-    if(!isMuted && isAudioUnlocked) document.getElementById('sndExplode').cloneNode().play().catch(()=>{});
+    if(!isMuted && hasInteracted) document.getElementById('sndExplode').cloneNode().play().catch(()=>{});
     let win = 0; let targets = new Set();
     bombs.forEach(b => {
         for(let i=b.r-1; i<=b.r+1; i++) for(let j=b.c-1; j<=b.c+1; j++) {
@@ -446,6 +475,8 @@ function calculateWin(matches) {
 function showMessage(msg) { const b = document.getElementById('messageBox'); b.innerText = msg; b.style.display = 'block'; setTimeout(()=> b.style.display = 'none', 1800); }
 function toggleAuto() { isAuto = !isAuto; document.getElementById('autoBtn').classList.toggle('auto-active', isAuto); if(isAuto && !isSpinning) startSpin(); }
 function changeBet(dir) { if (isSpinning) return; currentBetIdx = Math.max(0, Math.min(betOptions.length - 1, currentBetIdx + dir)); updateUI(); }
+function toggleMute() { isMuted = !isMuted; document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊'; playBGM(); }
+function cycleBGM() { currentBgmIdx = (currentBgmIdx % (bgmList.length - 1)) + 1; document.getElementById('bgmBtn').textContent = `🎵 音樂 ${currentBgmIdx}`; playBGM(); }
 </script>
 </body>
 </html>
