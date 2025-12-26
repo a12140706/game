@@ -172,19 +172,20 @@
 <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
 
 <script>
-// Firebase 初始化
+// --- Firebase 初始化 ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
-  authDomain: "game-80d68.firebaseapp.com",
-  projectId: "game-80d68",
-  storageBucket: "game-80d68.firebasestorage.app",
-  messagingSenderId: "636332967920",
-  appId: "1:636332967920:web:29e5600daf4db0ab613f35",
-  measurementId: "G-MJZ4PGEHSQ"
+    apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+    authDomain: "game-80d68.firebaseapp.com",
+    projectId: "game-80d68",
+    storageBucket: "game-80d68.firebasestorage.app",
+    messagingSenderId: "636332967920",
+    appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+    measurementId: "G-MJZ4PGEHSQ"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// --- 核心變數 ---
 let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
 let selectedHorse = null;
 let currentBet = 'allin'; 
@@ -201,11 +202,30 @@ const horseConfigs = [
     { filter: 'hue-rotate(50deg) brightness(1.3)' }, { filter: 'hue-rotate(180deg)' }, { filter: 'invert(100%) brightness(1.5)' } 
 ];
 
+// --- 數據同步邏輯 (高額優先) ---
+async function saveData() {
+    localStorage.setItem('sicbo_balance', balance);
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) { console.warn("雲端同步延遲"); }
+    }
+}
+
+// --- 安全跳轉器 ---
+async function syncAndRedirect(url) {
+    await saveData();
+    window.location.href = url;
+}
+
 function updateUI() {
-  document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
-  localStorage.setItem('sicbo_balance', balance);
-  const playerId = localStorage.getItem('player_id');
-  if (playerId) db.collection("users").doc(playerId).update({ balance: balance }).catch(()=>{});
+    document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
+    localStorage.setItem('sicbo_balance', balance);
+    // 這裡維持簡單更新，主要的 Firebase 同步交給遊戲關鍵點或跳轉攔截
 }
 
 function listenRank() {
@@ -224,6 +244,54 @@ function listenRank() {
 function openRank() { document.getElementById('rankModal').style.display = 'flex'; }
 function closeRank() { document.getElementById('rankModal').style.display = 'none'; }
 
+// --- 初始化與校準 ---
+window.onload = async () => {
+    generateNewOdds(); 
+    refreshOdds(); 
+    applyHorseStyles();
+    listenRank();
+
+    // 1. 本地讀取
+    const localBal = localStorage.getItem('sicbo_balance');
+    if (localBal !== null) balance = parseFloat(localBal);
+
+    // 2. 聯網校準 (高額優先)
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                    localStorage.setItem('sicbo_balance', balance);
+                } else if (cloudBal !== undefined && balance > cloudBal) {
+                    saveData(); // 本地贏比較多，補傳雲端
+                }
+            }
+        } catch (e) { console.log("離線模式"); }
+    }
+    updateUI();
+
+    // 3. 手機跳轉攔截
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                syncAndRedirect(href);
+            }
+        });
+    });
+};
+
+// 最終保險：滑掉頁面存檔
+window.addEventListener('pagehide', () => {
+    localStorage.setItem('sicbo_balance', balance);
+    saveData();
+});
+
+// --- 賽馬遊戲邏輯 ---
 function applyHorseStyles() {
     for (let i = 1; i <= 6; i++) {
         const horseEl = document.getElementById('h' + i);
@@ -322,7 +390,10 @@ function startRace() {
   let finalBetAmount = (currentBet === 'allin') ? balance : currentBet;
   if (balance <= 0 || balance < finalBetAmount) { showMsg(balance <= 0 ? "沒錢了" : "餘額不足"); return; }
 
-  balance -= finalBetAmount; updateUI(); isRacing = true;
+  balance -= finalBetAmount; 
+  updateUI(); 
+  saveData(); // 下注瞬間先同步餘額
+  isRacing = true;
   document.getElementById('goBtn').disabled = true;
   document.getElementById('h' + selectedHorse).classList.add('my-horse');
   
@@ -356,14 +427,28 @@ function finishRace(winnerId, betPlaced) {
       showMsg(`🎊 ${winnerId}號獲勝 🎊<br>贏得 $${winAmt.toLocaleString()}`);
       if(!isMuted && isAudioUnlocked) { document.getElementById('sndWin').muted = false; document.getElementById('sndWin').play().catch(()=>{}); }
       
-      // 寫入英雄榜
-      db.collection("horse_wins").add({
-          name: localStorage.getItem('player_name') || '無名騎士',
-          win: winAmt,
-          time: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } else { showMsg(`${winnerId}號獲勝<br>`); }
+      // --- 節省額度的英雄榜寫入 ---
+      const rankItems = document.querySelectorAll('.rank-item');
+      let tenthPlaceScore = 0;
+      if (rankItems.length >= 10) {
+          const lastWinText = rankItems[rankItems.length - 1].querySelector('.rank-win').textContent;
+          tenthPlaceScore = parseFloat(lastWinText.replace(/[$,]/g, ''));
+      }
+
+      if (rankItems.length < 10 || winAmt > tenthPlaceScore) {
+          db.collection("horse_wins").add({
+              name: localStorage.getItem('player_name') || '無名騎士',
+              win: winAmt,
+              time: firebase.firestore.FieldValue.serverTimestamp()
+          });
+      }
+    } else { 
+        showMsg(`${winnerId}號獲勝<br>`); 
+    }
     
+    // 結算後同步一次
+    saveData();
+
     setTimeout(() => {
       for(let i=1; i<=6; i++) { const el = document.getElementById('h'+i); el.style.left = '10px'; el.classList.remove('running', 'fatigued', 'my-horse'); }
       isRacing = false; document.getElementById('goBtn').disabled = false;
@@ -374,8 +459,6 @@ function finishRace(winnerId, betPlaced) {
 }
 
 function showMsg(text) { const overlay = document.getElementById('msgOverlay'); overlay.innerHTML = text; overlay.style.display = 'block'; }
-
-window.onload = () => { generateNewOdds(); refreshOdds(); updateUI(); applyHorseStyles(); listenRank(); };
 </script>
 </body>
 </html>

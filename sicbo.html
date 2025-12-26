@@ -269,8 +269,17 @@ async function saveData() {
     localStorage.setItem('sicbo_balance', balance); 
     localStorage.setItem('sicbo_history', JSON.stringify(historyData.slice(0,500))); 
     localStorage.setItem('sicbo_triple_miss', missCount); 
+    
     const playerId = localStorage.getItem('player_id');
-    if (playerId) db.collection("users").doc(playerId).update({ balance: balance }).catch(()=>{});
+    if (playerId && db) {
+        try {
+            // 使用 update 僅更新餘額，不影響其他欄位
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) { console.warn("雲端同步暫緩（可能是網路波動）"); }
+    }
 }
 
 function openModal(id) { document.getElementById(id).style.display = 'flex'; if(id==='fullHistoryOverlay') renderFullHistory(); }
@@ -403,7 +412,55 @@ setInterval(() => {
   document.getElementById('timer').textContent = timeLeft; 
 }, 1000);
 
-window.onload = () => initTable();
+window.onload = async () => {
+    const playerId = localStorage.getItem('player_id');
+    
+    // 1. 第一時間讀取本地，確保 UI 顯示 7000 而不是 5000
+    const localBal = localStorage.getItem('sicbo_balance');
+    if (localBal !== null) {
+        balance = parseFloat(localBal);
+    }
+
+    // 2. 聯網校對：防止雲端舊數據「回溯」
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                
+                // 如果雲端錢比較多 (代表在別台手機玩過)，才更新本地
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                    localStorage.setItem('sicbo_balance', balance);
+                } 
+                // 如果本地錢比較多 (代表上次滑掉沒同步到)，主動幫雲端補傳一次
+                else if (cloudBal !== undefined && balance > cloudBal) {
+                    saveData(); 
+                }
+            }
+        } catch (e) { console.log("離線模式，錢以手機為準"); }
+    }
+
+    initTable();
+    updateUI(); // 確保數字立即更新
+
+    // 攔截跳轉，確保「回首頁」一定能觸發雲端存檔
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                await saveData(); // 等待存檔完成
+                window.location.href = href;
+            }
+        });
+    });
+};
+
+// 最終保險：手機滑掉分頁時寫入本地
+window.addEventListener('pagehide', () => {
+    localStorage.setItem('sicbo_balance', balance);
+});
 </script>
 </body>
 </html>

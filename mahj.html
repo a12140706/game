@@ -202,6 +202,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
 
 <script>
+// --- Firebase 初始化 ---
 const firebaseConfig = {
   apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
   authDomain: "game-80d68.firebaseapp.com",
@@ -214,6 +215,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// --- 核心變數 ---
 let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
 let roundsSinceFree = parseInt(localStorage.getItem('mahjong_rounds_since_free')) || 0; 
 let isSpinning = false, isAuto = false, combo = 0, winThisSpin = 0;
@@ -224,6 +226,77 @@ const baseIcons = ['🀎','🀚','🀝','🀑','🀔','🀄','🀅','⬜'];
 const tileColor = { '🀎':'mj-red','🀚':'mj-blue','🀝':'mj-blue','🀑':'mj-green','🀔':'mj-green','🀄':'mj-red','🀅':'mj-green','⬜':'mj-blue','胡':'tile-hu','元寶':'tile-wild' };
 let board = [];
 
+// --- 數據同步邏輯 (高額優先) ---
+async function saveData() {
+    localStorage.setItem('sicbo_balance', balance);
+    localStorage.setItem('mahjong_rounds_since_free', roundsSinceFree);
+    
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) { console.warn("雲端同步延遲"); }
+    }
+}
+
+// --- 安全跳轉器 ---
+async function syncAndRedirect(url) {
+    await saveData();
+    window.location.href = url;
+}
+
+// --- 初始化與校準 ---
+window.onload = async () => {
+    createPillar(); 
+    initGrid();
+    
+    // 1. 本地讀取
+    const localBal = localStorage.getItem('sicbo_balance');
+    if (localBal !== null) balance = parseFloat(localBal);
+
+    // 2. 聯網校準
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                // 高額優先邏輯
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                    localStorage.setItem('sicbo_balance', balance);
+                } else if (cloudBal !== undefined && balance > cloudBal) {
+                    saveData(); // 本地領先，補傳雲端
+                }
+            }
+        } catch (e) { console.log("離線模式"); }
+    }
+
+    updateUI(); 
+    listenRank();
+
+    // 3. 手機跳轉攔截 (離開必存檔)
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                syncAndRedirect(href);
+            }
+        });
+    });
+};
+
+// 最終保險：滑掉頁面
+window.addEventListener('pagehide', () => {
+    localStorage.setItem('sicbo_balance', balance);
+    saveData();
+});
+
+// --- 遊戲核心邏輯 (保持原有功能) ---
 function initGrid() {
     const gridEl = document.getElementById('grid');
     gridEl.innerHTML = '';
@@ -286,10 +359,10 @@ function updateUI() {
   }
   document.getElementById('mainBody').classList.toggle('free-game-active', freeSpins > 0 || document.getElementById('mainBody').classList.contains('in-free'));
   document.getElementById('spinBtn').disabled = isSpinning;
+  
+  // 僅在這裡更新 LocalStorage 以確保效能
   localStorage.setItem('sicbo_balance', balance);
   localStorage.setItem('mahjong_rounds_since_free', roundsSinceFree);
-  const playerId = localStorage.getItem('player_id');
-  if (playerId) db.collection("users").doc(playerId).update({ balance: balance }).catch(()=>{});
 }
 
 function getRandomTile(r, c) {
@@ -325,6 +398,7 @@ async function startSpin() {
     if(balance < betOptions[currentBetIdx]) { isSpinning=false; isAuto=false; alert("餘額不足"); return; }
     balance -= betOptions[currentBetIdx]; roundsSinceFree++; 
     currentMultiplier = 1; freeGameTotalWin = 0;
+    saveData(); // 旋轉扣錢時同步雲端
   }
   if(!isMuted) document.getElementById('sndSpin').play();
   for (let r=0; r<4; r++) {
@@ -345,13 +419,34 @@ async function finalizeFreeGame() {
     balance += freeGameTotalWin;
     document.getElementById('totalSettlementAmt').textContent = Math.floor(freeGameTotalWin).toLocaleString();
     overlay.style.display = 'flex';
+    
+    // --- 節省額度的上傳邏輯 ---
     if (freeGameTotalWin > 0) {
-        db.collection("mahjong_wins").add({
-            name: localStorage.getItem('player_name') || '幸運兒',
-            win: freeGameTotalWin,
-            time: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // 取得目前畫面上排行第十名的金額
+        const rankItems = document.querySelectorAll('.rank-item');
+        let tenthPlaceScore = 0;
+        
+        if (rankItems.length >= 10) {
+            // 從最後一名的 HTML 中提取數字 (去掉 $ 跟逗號)
+            const lastWinText = rankItems[rankItems.length - 1].querySelector('.rank-win').textContent;
+            tenthPlaceScore = parseFloat(lastWinText.replace(/[$,]/g, ''));
+        }
+
+        // 只有贏得比第十名多，或是榜單還沒滿 10 個人時，才上傳
+        if (rankItems.length < 10 || freeGameTotalWin > tenthPlaceScore) {
+            db.collection("mahjong_wins").add({
+                name: localStorage.getItem('player_name') || '幸運兒',
+                win: freeGameTotalWin,
+                time: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log("恭喜入榜！已同步至雲端英雄榜。");
+        } else {
+            console.log("未達入榜門檻，節省雲端寫入次數。");
+        }
+        
+        saveData(); // 無論有沒有入榜，玩家自己的餘額都要同步
     }
+    
     await new Promise(r => setTimeout(r, 3000));
     overlay.style.display = 'none';
     document.getElementById('mainBody').classList.remove('in-free');
@@ -428,11 +523,13 @@ async function checkMatches() {
       roundsSinceFree = 0; if(!isMuted && document.getElementById('sndBell')) document.getElementById('sndBell').play();
       document.getElementById('huOverlay').style.display = 'block';
       freeSpins = 10; updateUI();
+      saveData(); // 進入免遊前存一次
       setTimeout(() => { document.getElementById('huOverlay').style.display = 'none'; if (isAuto) startSpin(); }, 1000);
     } else {
       isSpinning = false; updateUI();
       if (isAuto) setTimeout(startSpin, 1000);
       else if (freeSpins === 0 && document.getElementById('mainBody').classList.contains('in-free')) startSpin();
+      else saveData(); // 普通旋轉結束存一次
     }
   }
 }
@@ -445,8 +542,6 @@ function changeBet(dir) {
 function toggleAuto() { isAuto = !isAuto; document.getElementById('autoBtn').classList.toggle('active', isAuto); if (isAuto && !isSpinning) startSpin(); }
 function cycleBGM() { currentBGM = currentBGM === 1 ? 2 : 1; document.getElementById('bgmBtn').textContent = `🎵 音樂 ${currentBGM}`; if(hasInteracted) playBGM(); }
 function toggleMute() { isMuted = !isMuted; document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊'; playBGM(); }
-
-window.onload = () => { createPillar(); initGrid(); updateUI(); listenRank(); };
 </script>
 </body>
 </html>

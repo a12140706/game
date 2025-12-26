@@ -343,29 +343,36 @@
 
   async function checkUserStatus() {
     let playerId = localStorage.getItem('player_id');
-    
-    // 如果沒有 ID，立刻生一個存起來，防止後面 doc() 路徑為空
-    if (!playerId) {
-      playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
-      localStorage.setItem('player_id', playerId);
-      document.getElementById('nameModal').style.display = 'flex';
-      return;
-    }
+    if (!playerId) { /* ...原本的 ID 生成邏輯... */ return; }
 
     try {
-      const doc = await db.collection("users").doc(playerId).get();
-      if (!doc.exists) {
-        document.getElementById('nameModal').style.display = 'flex';
-      } else {
-        const cloudData = doc.data();
-        localStorage.setItem('player_name', cloudData.name);
-        localStorage.setItem('sicbo_balance', cloudData.balance);
-        document.getElementById('welcomeUser').textContent = `歡迎回來，${cloudData.name}`;
-        updateMainBalance();
-      }
+        const doc = await db.collection("users").doc(playerId).get();
+        if (doc.exists) {
+            const cloudData = doc.data();
+            const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+            const cloudBal = cloudData.balance;
+
+            localStorage.setItem('player_name', cloudData.name);
+
+            // 只有雲端錢比較多時才覆蓋本地
+            if (cloudBal !== undefined && cloudBal > localBal) {
+                localStorage.setItem('sicbo_balance', cloudBal);
+            } 
+            // 如果本地錢比較多，代表剛才從遊戲滑掉沒存到雲端，這裡幫它補存
+            else if (cloudBal !== undefined && localBal > cloudBal) {
+                await db.collection("users").doc(playerId).update({ balance: localBal });
+            }
+
+            document.getElementById('welcomeUser').textContent = `歡迎回來，${cloudData.name}`;
+            updateMainBalance();
+        }
     } catch (e) {
       console.error("Firebase 連線失敗", e);
-      if (!localStorage.getItem('player_name')) {
+      // 離線狀態：如果本地已經有名字，就直接顯示，不要卡在登入畫面
+      const localName = localStorage.getItem('player_name');
+      if (localName) {
+        document.getElementById('welcomeUser').textContent = `歡迎回來(離線)，${localName}`;
+      } else {
         document.getElementById('nameModal').style.display = 'flex';
       }
       updateMainBalance();
@@ -374,12 +381,13 @@
 
   // --- 關鍵修復：儲存暱稱 ---
   async function saveNewPlayer() {
-    const name = document.getElementById('nicknameInput').value.trim();
+    const nameInput = document.getElementById('nicknameInput');
+    const name = nameInput.value.trim();
     if (!name) return alert("請輸入名字！");
 
+    // 1. 強制重新獲取一次 ID，如果沒有就地生成
     let playerId = localStorage.getItem('player_id');
-    // 二次防護：如果點擊按鈕時萬一沒 ID，現場再補一個
-    if (!playerId) {
+    if (!playerId || playerId === "" || playerId === "null") {
       playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
       localStorage.setItem('player_id', playerId);
     }
@@ -387,10 +395,11 @@
     const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
 
     try {
+      // 2. 先存本地，確保 UI 能先動
       localStorage.setItem('player_name', name);
       localStorage.setItem('sicbo_balance', localBal);
 
-      // 執行 Firebase 寫入
+      // 3. 執行 Firebase 寫入 (此時 playerId 絕對有值)
       await db.collection("users").doc(playerId).set({
         name: name,
         balance: localBal,
@@ -402,8 +411,9 @@
       updateMainBalance();
     } catch (e) {
       console.error("儲存失敗:", e);
-      // 就算失敗也要關掉視窗讓玩家能進去
+      // 萬一 Firebase 真的還是失敗，至少要讓玩家關掉視窗進入遊戲
       document.getElementById('nameModal').style.display = 'none';
+      document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
       updateMainBalance();
     }
   }

@@ -730,7 +730,21 @@
             if (spinsLeft <= 0) setTimeout(endSpecialMode, 1000);
             else { isSpinning = false; document.getElementById('spinBtn').disabled = false; if (isAuto) setTimeout(specialSpin, 1200); }
         }
-
+async function syncToFirebase() {
+            const playerId = localStorage.getItem('player_id');
+            if (playerId && db) {
+                try {
+                    // 使用 update 僅更新餘額，效率最高
+                    await db.collection("users").doc(playerId).update({ 
+                        balance: balance,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    console.log("雲端資料已同步");
+                } catch (e) {
+                    console.error("雲端同步失敗:", e);
+                }
+            }
+        }
         async function endSpecialMode() {
             let totalWin = parseInt(document.getElementById('winText').innerText.replace(/,/g, ''));
             balance += totalWin;
@@ -819,14 +833,72 @@
             document.getElementById('balanceText').innerText = Math.floor(balance).toLocaleString();
             document.getElementById('betText').innerText = betOptions[betIdx];
             document.getElementById('missCountText').innerText = missCount;
-            localStorage.setItem('sicbo_balance', balance);
-            localStorage.setItem('heart_miss_count', missCount);
+            
+            // 每一局都存本地，確保回首頁時錢是對的 (不花錢)
+            localStorage.setItem('sicbo_balance', balance.toString());
+            localStorage.setItem('heart_miss_count', missCount.toString());
         }
 
         function changeBet(dir) { if (isSpinning) return; betIdx = Math.max(0, Math.min(betOptions.length - 1, betIdx + dir)); updateUI(); }
         function toggleAuto() { isAuto = !isAuto; document.getElementById('autoBtn').classList.toggle('active', isAuto); if (isAuto && !isSpinning) handleSpin(); }
 
-        window.onload = () => { initBoardData(); initGridUI(); updateUI(); };
+        window.onload = async () => {
+    // 1. 第一時間讀取本地，讓玩家進場立刻看到錢，不卡頓
+    const savedBal = localStorage.getItem('sicbo_balance');
+    if (savedBal !== null) {
+        balance = parseFloat(savedBal);
+    }
+
+    // 2. 核心：聯網校正 (解決滑掉遊戲/換機儲值問題)
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && typeof db !== 'undefined') {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                
+                // 如果雲端的錢比較多 (代表在別台手機玩過)，才更新本地
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                    localStorage.setItem('sicbo_balance', balance);
+                    console.log("已從雲端同步最新高額餘額");
+                } 
+                // 如果本地錢比較多 (代表上次滑掉沒同步成功)，主動幫雲端補傳
+                else if (cloudBal !== undefined && balance > cloudBal) {
+                    syncToFirebase(); 
+                    console.log("本地進度領先，已自動補傳雲端");
+                }
+            }
+        } catch (e) {
+            console.log("離線模式，使用本地餘額");
+        }
+    }
+
+    // 3. 原本的初始化流程
+    initBoardData(); 
+    initGridUI(); 
+    updateUI(); 
+};
+
+// --- 下方原本的跳轉攔截保持不變 ---
+document.addEventListener('click', async function(e) {
+    let target = e.target.closest('a');
+    if (target && target.href && target.getAttribute('href') !== '#') {
+        const url = target.getAttribute('href');
+        if (!url.startsWith('javascript')) {
+            e.preventDefault();
+            console.log("正在儲存進度...");
+            await syncToFirebase();
+            window.location.assign(url);
+        }
+    }
+}, false);
+
+// 最終保險保持不變
+window.addEventListener('pagehide', function() {
+    localStorage.setItem('sicbo_balance', balance); // 至少本地一定要存到
+    syncToFirebase();
+});
     </script>
 </body>
 
