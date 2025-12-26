@@ -343,16 +343,22 @@
 
   async function checkUserStatus() {
     let playerId = localStorage.getItem('player_id');
+    
+    // 1. 如果完全沒有 ID (第一次登入)，直接顯示輸入框並結束，不跑後續 Firebase 查詢
     if (!playerId) {
-      playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
-      localStorage.setItem('player_id', playerId);
+      document.getElementById('nameModal').style.display = 'flex';
+      return; 
     }
+
     try {
       const userRef = db.collection("users").doc(playerId);
       const doc = await userRef.get();
+      
+      // 2. 如果有 ID 但雲端找不到資料 (例如資料庫重置過)
       if (!doc.exists()) {
         document.getElementById('nameModal').style.display = 'flex';
       } else {
+        // 3. 正常登入
         const cloudData = doc.data();
         localStorage.setItem('player_name', cloudData.name);
         localStorage.setItem('sicbo_balance', cloudData.balance);
@@ -361,6 +367,10 @@
       }
     } catch (e) {
       console.error("Firebase 連線失敗", e);
+      // 網路異常時，如果本地也沒暱稱，還是要讓玩家輸入
+      if (!localStorage.getItem('player_name')) {
+        document.getElementById('nameModal').style.display = 'flex';
+      }
       updateMainBalance();
     }
   }
