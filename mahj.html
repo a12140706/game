@@ -359,15 +359,49 @@ function updateUI() {
   document.getElementById('spinBtn').disabled = isSpinning;
 }
 
+function countTiles() {
+    let counts = {};
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            let icon = board[r] ? board[r][c] : null;
+            if (icon) {
+                counts[icon] = (counts[icon] || 0) + 1;
+            }
+        }
+    }
+    return counts;
+}
 function getRandomTile(r, c) {
     const isFree = freeSpins > 0 || document.getElementById('mainBody').classList.contains('in-free');
+    
+    // 1. 特殊牌處理 (元寶與胡不計入 4 張限制)
     if (Math.random() < 0.04) return '元寶'; 
     if (!isFree && Math.random() > 0.985) return '胡';
+
+    // 2. 準備候選名單
     const wildCandidates = ['⬜', '🀄', '🀅'];
-    const junkTiles = baseIcons.filter(icon => !wildCandidates.includes(icon));
+    const currentCounts = countTiles(); // 取得當前盤面計數
+
+    // 3. 過濾掉已經出現 4 次的牌
+    let availableIcons = baseIcons.filter(icon => (currentCounts[icon] || 0) < 4);
+    
+    // 如果所有牌都滿了 (極端情況)，強制清空計數以防當機
+    if (availableIcons.length === 0) availableIcons = baseIcons;
+
+    // 4. 決定要產出 Wild 還是普通牌 (且該牌必須在可用名單內)
     let wildChance = 0.55 * Math.pow(0.8, combo); 
     if (c !== undefined && c < 2) wildChance *= 0.4;
-    return Math.random() < wildChance ? wildCandidates[Math.floor(Math.random() * wildCandidates.length)] : junkTiles[Math.floor(Math.random() * junkTiles.length)];
+
+    if (Math.random() < wildChance) {
+        // 從可用的 Wild 候選中選取
+        let availableWilds = wildCandidates.filter(w => availableIcons.includes(w));
+        if (availableWilds.length > 0) {
+            return availableWilds[Math.floor(Math.random() * availableWilds.length)];
+        }
+    }
+
+    // 從所有可用的牌中選取一朵
+    return availableIcons[Math.floor(Math.random() * availableIcons.length)];
 }
 
 function handleFirstClick() { if (!hasInteracted) { hasInteracted = true; playBGM(); } }
