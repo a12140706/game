@@ -247,6 +247,7 @@ let missCount = parseInt(localStorage.getItem('sicbo_triple_miss')) || 0;
 let currentChip = 600, totalBet = 0, betData = {}, lastRoundBets = {}, isAutoPlaying = false;
 let isMuted = false, currentBgmIdx = 1, timeLeft = 20; 
 const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+const BET_LIMIT = 6000;
 const DICE_CHARS = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
 const SUM_ODDS = { 4:69, 17:69, 5:34, 16:34, 6:20, 15:20, 7:13, 14:13, 8:9, 13:9, 9:7.4, 10:6.8, 11:6.8, 12:7.4 };
 
@@ -338,11 +339,55 @@ async function showRank() {
 // --- 遊戲邏輯 ---
 function selectChip(val, el) { currentChip = val; document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); playSound('sndTick'); }
 function placeBet(key) {
+  // 1. 時間限制判斷
   if (timeLeft <= 3) return;
-  if (balance < currentChip) return;
-  betData[key] = (betData[key] || 0) + currentChip; 
-  balance -= currentChip; totalBet += currentChip;
-  playSound('sndChip'); updateUI(); renderChip(key);
+
+  // 2. 餘額判斷
+  if (balance < currentChip) {
+    alert("餘額不足！");
+    return;
+  }
+
+  // 3. 【新增】單項下注上限判斷 (BET_LIMIT)
+  let currentPosBet = (betData[key] || 0);
+  if (currentPosBet + currentChip > BET_LIMIT) {
+    return;
+  }
+
+  // 4. 【新增】總下注額限制 (可選，若您需要限制整場總額，可加此段)
+  // if (totalBet + currentChip > 20000) { 
+  //   alert("總下注額已達上限"); 
+  //   return; 
+  // }
+
+  // 執行下注
+  betData[key] = currentPosBet + currentChip; 
+  balance -= currentChip; 
+  totalBet += currentChip;
+  
+  playSound('sndChip'); 
+  updateUI(); 
+  renderChip(key);
+}
+
+// ... 其餘函式保持不變 ...
+
+// 修改 repeatBets 也要考慮限制 (避免自動投注時爆額度)
+function repeatBets() {
+  for (let k in lastRoundBets) {
+    let amtToBet = lastRoundBets[k];
+    let currentInPos = (betData[k] || 0);
+    
+    // 計算該位置還能塞多少籌碼
+    let canBetAmt = Math.min(amtToBet, BET_LIMIT - currentInPos);
+    let clicks = Math.floor(canBetAmt / currentChip);
+    
+    for(let i=0; i<clicks; i++) {
+      if (balance >= currentChip) {
+        placeBet(k);
+      }
+    }
+  }
 }
 function renderChip(key) {
   const container = document.getElementById('chip-' + key);
@@ -414,12 +459,6 @@ function simulateRound() {
   }, 4500);
 }
 
-function repeatBets() {
-  for (let k in lastRoundBets) {
-    let clicks = Math.floor(lastRoundBets[k] / currentChip);
-    for(let i=0; i<clicks; i++) placeBet(k);
-  }
-}
 function clearBets() { balance += totalBet; totalBet = 0; betData = {}; document.querySelectorAll('.chip-on-cell').forEach(c => c.remove()); updateUI(); }
 function toggleAuto() { isAutoPlaying = !isAutoPlaying; document.getElementById('btnAuto').classList.toggle('btn-auto-active', isAutoPlaying); if (isAutoPlaying && timeLeft > 3) repeatBets(); }
 function renderHistory() { document.getElementById('historyList').innerHTML = historyData.slice(0, 10).map(h => `<div class="hist-item"><span>${h.dice}</span><span class="sum-${h.type}">${h.sum}</span></div>`).join(''); }
