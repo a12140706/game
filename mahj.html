@@ -396,7 +396,7 @@ function getRandomTile(r, c) {
         wildChance = 0.06;
     } else {
         // 正常衰減：使用 0.6 次方，5連擊時約 4.3%
-        wildChance = wildChance * Math.pow(0.8, combo);
+        wildChance = wildChance * Math.pow(0.75, combo);
     }
 
     // 前兩行機率額外減半 (防止最容易觸發連線的位置產出 Wild)
