@@ -115,8 +115,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
 
         #bonusOverlay {
@@ -145,14 +152,32 @@
             position: relative;
         }
 
-        .shake { animation: shakeAnim 0.4s; }
+        .shake {
+            animation: shakeAnim 0.4s;
+        }
 
         @keyframes shakeAnim {
-            0%, 100% { transform: translate(0, 0); }
-            20% { transform: translate(-5px, 5px); }
-            40% { transform: translate(5px, -5px); }
-            60% { transform: translate(-5px, -5px); }
-            80% { transform: translate(5px, 5px); }
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            20% {
+                transform: translate(-5px, 5px);
+            }
+
+            40% {
+                transform: translate(5px, -5px);
+            }
+
+            60% {
+                transform: translate(-5px, -5px);
+            }
+
+            80% {
+                transform: translate(5px, 5px);
+            }
         }
 
         .grid {
@@ -230,20 +255,59 @@
         }
 
         @keyframes winImpact {
-            0% { background-color: #000; transform: scale(1); }
-            100% { background-color: #b8860b; transform: scale(0.9); }
+            0% {
+                background-color: #000;
+                transform: scale(1);
+            }
+
+            100% {
+                background-color: #b8860b;
+                transform: scale(0.9);
+            }
         }
 
-        .decor-tile { opacity: 0.35; filter: grayscale(0.5); }
-        .heart-tile { background: #000; }
-        .heart-icon { font-size: 45px; line-height: 1; transition: all 0.3s; display: inline-block; }
-        .heart-red .heart-icon { color: #ff1744; filter: drop-shadow(0 0 8px #ff1744); }
-        .heart-purple .heart-icon { color: #ff1744; filter: hue-rotate(270deg) brightness(1.2) drop-shadow(0 0 10px #e040fb); }
-        .heart-gold .heart-icon { color: #ff1744; filter: hue-rotate(50deg) brightness(2) contrast(1.5) drop-shadow(0 0 20px #ffeb3b); animation: gold-pulse 1s infinite alternate; }
+        .decor-tile {
+            opacity: 0.35;
+            filter: grayscale(0.5);
+        }
+
+        .heart-tile {
+            background: #000;
+        }
+
+        .heart-icon {
+            font-size: 45px;
+            line-height: 1;
+            transition: all 0.3s;
+            display: inline-block;
+        }
+
+        .heart-red .heart-icon {
+            color: #ff1744;
+            filter: drop-shadow(0 0 8px #ff1744);
+        }
+
+        .heart-purple .heart-icon {
+            color: #ff1744;
+            filter: hue-rotate(270deg) brightness(1.2) drop-shadow(0 0 10px #e040fb);
+        }
+
+        .heart-gold .heart-icon {
+            color: #ff1744;
+            filter: hue-rotate(50deg) brightness(2) contrast(1.5) drop-shadow(0 0 20px #ffeb3b);
+            animation: gold-pulse 1s infinite alternate;
+        }
 
         @keyframes gold-pulse {
-            0% { transform: scale(1); filter: hue-rotate(50deg) brightness(1.8) drop-shadow(0 0 10px #ffeb3b); }
-            100% { transform: scale(1.25); filter: hue-rotate(50deg) brightness(2.5) drop-shadow(0 0 30px #fff700); }
+            0% {
+                transform: scale(1);
+                filter: hue-rotate(50deg) brightness(1.8) drop-shadow(0 0 10px #ffeb3b);
+            }
+
+            100% {
+                transform: scale(1.25);
+                filter: hue-rotate(50deg) brightness(2.5) drop-shadow(0 0 30px #fff700);
+            }
         }
 
         .heart-val {
@@ -260,71 +324,190 @@
             transform: translateY(-50%);
         }
 
-        .bottom-panel { background: #000; padding: 12px; width: 100%; }
-        
-        .display-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        .win-display {
-            flex: 2; background: #1a0033; color: var(--gold); text-align: center;
-            padding: 8px; border-radius: 8px; font-size: 20px; border: 1px solid #4a148c; font-weight: bold;
+        .bottom-panel {
+            background: #000;
+            padding: 12px;
+            width: 100%;
         }
-        .miss-display {
-            flex: 1; background: #222; border: 1px solid #444; border-radius: 8px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #aaa; font-size: 9px;
-        }
-        .miss-display span { color: #fff; font-size: 16px; font-weight: bold; }
 
-        .control-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .display-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .win-display {
+            flex: 2;
+            background: #1a0033;
+            color: var(--gold);
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 20px;
+            border: 1px solid #4a148c;
+            font-weight: bold;
+        }
+
+        .miss-display {
+            flex: 1;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 9px;
+        }
+
+        .miss-display span {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
 
         .spin-btn {
-            flex: 1.5; height: 55px; background: linear-gradient(#ba68c8, #7b1fa2);
-            border: none; border-radius: 12px; color: #fff; font-size: 22px; font-weight: bold;
+            flex: 1.5;
+            height: 55px;
+            background: linear-gradient(#ba68c8, #7b1fa2);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
             box-shadow: 0 4px 0 #4a148c;
         }
-        .spin-btn:disabled { filter: grayscale(1); opacity: 0.6; }
 
-        .auto-btn { flex: 1; height: 55px; background: #455a64; border: none; border-radius: 12px; color: #fff; font-weight: bold; }
-        .auto-btn.active { background: #c2185b; box-shadow: 0 0 15px #c2185b; }
+        .spin-btn:disabled {
+            filter: grayscale(1);
+            opacity: 0.6;
+        }
+
+        .auto-btn {
+            flex: 1;
+            height: 55px;
+            background: #455a64;
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .auto-btn.active {
+            background: #c2185b;
+            box-shadow: 0 0 15px #c2185b;
+        }
 
         .bet-box {
-            flex: 1.2; background: #111; border-radius: 12px; border: 1px solid #444;
-            height: 55px; display: flex; flex-direction: column; justify-content: center; text-align: center;
+            flex: 1.2;
+            background: #111;
+            border-radius: 12px;
+            border: 1px solid #444;
+            height: 55px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
         }
 
         #bigWinResult {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            z-index: 3000; background: rgba(0, 0, 0, 0.95); border: 3px solid var(--gold);
-            padding: 30px; border-radius: 20px; text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 3000;
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid var(--gold);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none; box-shadow: 0 0 50px rgba(255, 216, 107, 0.4);
+            pointer-events: none;
+            box-shadow: 0 0 50px rgba(255, 216, 107, 0.4);
         }
 
         .rank-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 5000; display: none;
-            flex-direction: column; align-items: center; padding: 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 5000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
             padding-top: calc(env(safe-area-inset-top) + 20px);
         }
+
         .rank-content {
-            width: 100%; max-width: 400px; background: #2e0d4d; border: 2px solid var(--gold);
-            border-radius: 15px; overflow: hidden; display: flex; flex-direction: column;
+            width: 100%;
+            max-width: 400px;
+            background: #2e0d4d;
+            border: 2px solid var(--gold);
+            border-radius: 15px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
+
         .rank-header {
-            background: linear-gradient(#4a0404, #2a0202); padding: 15px;
-            text-align: center; color: var(--gold); font-size: 20px; font-weight: bold;
+            background: linear-gradient(#4a0404, #2a0202);
+            padding: 15px;
+            text-align: center;
+            color: var(--gold);
+            font-size: 20px;
+            font-weight: bold;
             border-bottom: 2px solid #5c0a0a;
         }
-        .rank-list { padding: 10px; max-height: 60dvh; overflow-y: auto; }
-        .rank-item {
-            display: flex; justify-content: space-between; padding: 12px;
-            border-bottom: 1px solid rgba(255,216,107,0.2); font-size: 16px;
+
+        .rank-list {
+            padding: 10px;
+            max-height: 60dvh;
+            overflow-y: auto;
         }
-        .rank-item:last-child { border-bottom: none; }
-        .rank-no { color: var(--gold); font-weight: bold; width: 30px; }
-        .rank-val { color: #fff; flex: 1; text-align: right; }
+
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 216, 107, 0.2);
+            font-size: 16px;
+        }
+
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank-no {
+            color: var(--gold);
+            font-weight: bold;
+            width: 30px;
+        }
+
+        .rank-val {
+            color: #fff;
+            flex: 1;
+            text-align: right;
+        }
+
         .close-rank {
-            margin-top: 20px; padding: 12px 40px; background: #7b1fa2;
-            border: none; border-radius: 25px; color: #fff; font-weight: bold;
+            margin-top: 20px;
+            padding: 12px 40px;
+            background: #7b1fa2;
+            border: none;
+            border-radius: 25px;
+            color: #fff;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -336,10 +519,14 @@
         <div class="audio-ctrl" onclick="toggleMute()" id="muteBtn">🔊</div>
         <div class="audio-ctrl" onclick="cycleBGM()" id="bgmBtn">🎵 音樂1</div>
         <div class="balance-box">💎 <span id="balanceText">0</span></div>
-        <button onclick="showRank()" style="background:#ccac00; border:none; border-radius:12px; padding:3px 8px; color:#000; font-size:11px; font-weight:bold;">🏆 排行</button>
+        <button onclick="showRank()"
+            style="background:#ccac00; border:none; border-radius:12px; padding:3px 8px; color:#000; font-size:11px; font-weight:bold;">🏆
+            排行</button>
         <marquee style="flex:1; color:var(--gold); font-size: 12px;">有問題找阿記</marquee>
         <a href="index.html" style="text-decoration:none;">
-            <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px; font-weight:bold;">🏠 回大廳</button>
+            <button
+                style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px; font-weight:bold;">🏠
+                回大廳</button>
         </a>
     </div>
 
@@ -374,7 +561,8 @@
 
     <div id="bigWinResult">
         <div style="color: var(--gold); font-size: 20px; font-weight: bold; margin-bottom: 10px;">TOTAL WIN</div>
-        <div id="resultAmount" style="color: #fff; font-size: 40px; font-weight: 900; text-shadow: 0 0 10px var(--gold);">0</div>
+        <div id="resultAmount"
+            style="color: #fff; font-size: 40px; font-weight: 900; text-shadow: 0 0 10px var(--gold);">0</div>
     </div>
 
     <div id="rankModal" class="rank-modal">
@@ -405,11 +593,13 @@
             appId: "1:636332967920:web:29e5600daf4db0ab613f35",
             measurementId: "G-MJZ4PGEHSQ"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
 
         let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
-        let missCount = parseInt(localStorage.getItem('heart_miss_count')) || 0; 
+        let missCount = parseInt(localStorage.getItem('heart_miss_count')) || 0;
         let rows = 4, cols = 5;
         let isSpinning = false, isAuto = false, isSpecialMode = false;
         let betOptions = [500, 1000, 3000, 5000, 10000, 50000], betIdx = 1;
@@ -544,7 +734,7 @@
             if (balance < betOptions[betIdx]) { alert("餘額不足"); isAuto = false; updateUI(); return; }
 
             balance -= betOptions[betIdx];
-            missCount++; 
+            missCount++;
             isSpinning = true;
             document.getElementById('winText').innerText = "0";
             document.getElementById('spinBtn').disabled = true;
@@ -606,7 +796,7 @@
         }
 
         async function triggerSpecialMode() {
-            missCount = 0; 
+            missCount = 0;
             updateUI();
             const wrapper = document.getElementById('mainWrapper');
             wrapper.classList.add('shake');
@@ -675,8 +865,8 @@
                             strip.style.transition = `transform ${duration}ms cubic-bezier(0.45, 0.05, 0.55, 0.95)`;
                             strip.style.transform = `translateY(-${8 * tileSize}px)`;
                             setTimeout(() => {
-                                let chance = 0.05; 
-                                if (r === 2 || r === 3) chance = 0.02;  
+                                let chance = 0.05;
+                                if (r === 2 || r === 3) chance = 0.02;
                                 if (r === 0 || r === 1) chance = 0.005;
                                 if (Math.random() < chance) {
                                     board[r][c] = { type: '❤️', val: getHeartMultiplier(r) };
@@ -730,12 +920,12 @@
             if (spinsLeft <= 0) setTimeout(endSpecialMode, 1000);
             else { isSpinning = false; document.getElementById('spinBtn').disabled = false; if (isAuto) setTimeout(specialSpin, 1200); }
         }
-async function syncToFirebase() {
+        async function syncToFirebase() {
             const playerId = localStorage.getItem('player_id');
             if (playerId && db) {
                 try {
                     // 使用 update 僅更新餘額，效率最高
-                    await db.collection("users").doc(playerId).update({ 
+                    await db.collection("users").doc(playerId).update({
                         balance: balance,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -749,7 +939,7 @@ async function syncToFirebase() {
             let totalWin = parseInt(document.getElementById('winText').innerText.replace(/,/g, ''));
             balance += totalWin;
             updateUI(); // 先更新本地餘額
-            
+
             // 重要：呼叫寫入判斷 (只在此時機點同步雲端)
             await updateRankingAndCloud(totalWin);
 
@@ -771,10 +961,10 @@ async function syncToFirebase() {
         // --- 核心寫入優化邏輯 (Firebase + 門檻判斷) ---
         async function updateRankingAndCloud(winAmt) {
             if (winAmt <= 0) return;
-            
+
             // 1. 讀取本地排行榜快照
             let ranks = JSON.parse(localStorage.getItem('heart_ranks')) || [];
-            
+
             // 2. 門檻判斷：是否擠進前 10 名
             const isTopTen = ranks.length < 10 || winAmt > ranks[ranks.length - 1].amount;
 
@@ -790,7 +980,7 @@ async function syncToFirebase() {
                 if (playerId) {
                     try {
                         // 同步總餘額到 users 集合
-                        await db.collection("users").doc(playerId).update({ 
+                        await db.collection("users").doc(playerId).update({
                             balance: balance,
                             lastWin: winAmt, // 順便記錄最後一次的大獎
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -804,58 +994,58 @@ async function syncToFirebase() {
         }
 
         async function showRank() {
-    const modal = document.getElementById('rankModal');
-    const list = document.getElementById('rankList');
-    
-    // 顯示讀取狀態
-    list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">載入全球排行中...</div>';
-    modal.style.display = 'flex';
+            const modal = document.getElementById('rankModal');
+            const list = document.getElementById('rankList');
 
-    try {
-        // 從 "users" 集合中，依照 "lastWin" 欄位由大到小排序，取前 10 名
-        const snapshot = await db.collection("users")
-                                 .orderBy("lastWin", "desc") 
-                                 .limit(10)
-                                 .get();
+            // 顯示讀取狀態
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">載入全球排行中...</div>';
+            modal.style.display = 'flex';
 
-        list.innerHTML = '';
+            try {
+                // 從 "users" 集合中，依照 "lastWin" 欄位由大到小排序，取前 10 名
+                const snapshot = await db.collection("users")
+                    .orderBy("lastWin", "desc")
+                    .limit(10)
+                    .get();
 
-        if (snapshot.empty) {
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無紀錄</div>';
-            return;
-        }
+                list.innerHTML = '';
 
-        let index = 1;
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            // 只有當玩家有贏過錢 (lastWin > 0) 才顯示在榜單上
-            if (data.lastWin && data.lastWin > 0) {
-                const row = document.createElement('div');
-                row.className = 'rank-item'; // 套用你原本的 CSS
-                row.style.display = 'flex';
-                row.style.justifyContent = 'space-between';
-                row.style.padding = '10px';
-                row.style.borderBottom = '1px solid #333';
-                
-                row.innerHTML = `
+                if (snapshot.empty) {
+                    list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無紀錄</div>';
+                    return;
+                }
+
+                let index = 1;
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    // 只有當玩家有贏過錢 (lastWin > 0) 才顯示在榜單上
+                    if (data.lastWin && data.lastWin > 0) {
+                        const row = document.createElement('div');
+                        row.className = 'rank-item'; // 套用你原本的 CSS
+                        row.style.display = 'flex';
+                        row.style.justifyContent = 'space-between';
+                        row.style.padding = '10px';
+                        row.style.borderBottom = '1px solid #333';
+
+                        row.innerHTML = `
                     <span class="rank-no">#${index}</span>
                     <span class="rank-name" style="color:var(--btn-gold)">${data.name || '匿名'}</span>
                     <span class="rank-val" style="color:#2ecc71">💎 ${Math.floor(data.lastWin).toLocaleString()}</span>
                 `;
-                list.appendChild(row);
-                index++;
-            }
-        });
-        
-        if (index === 1) {
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無得獎紀錄</div>';
-        }
+                        list.appendChild(row);
+                        index++;
+                    }
+                });
 
-    } catch (error) {
-        console.error("排行讀取失敗:", error);
-        list.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4757;">連線失敗</div>';
-    }
-}
+                if (index === 1) {
+                    list.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">暫無得獎紀錄</div>';
+                }
+
+            } catch (error) {
+                console.error("排行讀取失敗:", error);
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#ff4757;">連線失敗</div>';
+            }
+        }
 
         function closeRank() {
             document.getElementById('rankModal').style.display = 'none';
@@ -865,7 +1055,7 @@ async function syncToFirebase() {
             document.getElementById('balanceText').innerText = Math.floor(balance).toLocaleString();
             document.getElementById('betText').innerText = betOptions[betIdx];
             document.getElementById('missCountText').innerText = missCount;
-            
+
             // 每一局都存本地，確保回首頁時錢是對的 (不花錢)
             localStorage.setItem('sicbo_balance', balance.toString());
             localStorage.setItem('heart_miss_count', missCount.toString());
@@ -875,62 +1065,62 @@ async function syncToFirebase() {
         function toggleAuto() { isAuto = !isAuto; document.getElementById('autoBtn').classList.toggle('active', isAuto); if (isAuto && !isSpinning) handleSpin(); }
 
         window.onload = async () => {
-    // 1. 第一時間讀取本地，讓玩家進場立刻看到錢，不卡頓
-    const savedBal = localStorage.getItem('sicbo_balance');
-    if (savedBal !== null) {
-        balance = parseFloat(savedBal);
-    }
+            // 1. 第一時間讀取本地，讓玩家進場立刻看到錢，不卡頓
+            const savedBal = localStorage.getItem('sicbo_balance');
+            if (savedBal !== null) {
+                balance = parseFloat(savedBal);
+            }
 
-    // 2. 核心：聯網校正 (解決滑掉遊戲/換機儲值問題)
-    const playerId = localStorage.getItem('player_id');
-    if (playerId && typeof db !== 'undefined') {
-        try {
-            const doc = await db.collection("users").doc(playerId).get();
-            if (doc.exists) {
-                const cloudBal = doc.data().balance;
-                
-                // 如果雲端的錢比較多 (代表在別台手機玩過)，才更新本地
-                if (cloudBal !== undefined && cloudBal > balance) {
-                    balance = cloudBal;
-                    localStorage.setItem('sicbo_balance', balance);
-                    console.log("已從雲端同步最新高額餘額");
-                } 
-                // 如果本地錢比較多 (代表上次滑掉沒同步成功)，主動幫雲端補傳
-                else if (cloudBal !== undefined && balance > cloudBal) {
-                    syncToFirebase(); 
-                    console.log("本地進度領先，已自動補傳雲端");
+            // 2. 核心：聯網校正 (解決滑掉遊戲/換機儲值問題)
+            const playerId = localStorage.getItem('player_id');
+            if (playerId && typeof db !== 'undefined') {
+                try {
+                    const doc = await db.collection("users").doc(playerId).get();
+                    if (doc.exists) {
+                        const cloudBal = doc.data().balance;
+
+                        // 如果雲端的錢比較多 (代表在別台手機玩過)，才更新本地
+                        if (cloudBal !== undefined && cloudBal > balance) {
+                            balance = cloudBal;
+                            localStorage.setItem('sicbo_balance', balance);
+                            console.log("已從雲端同步最新高額餘額");
+                        }
+                        // 如果本地錢比較多 (代表上次滑掉沒同步成功)，主動幫雲端補傳
+                        else if (cloudBal !== undefined && balance > cloudBal) {
+                            syncToFirebase();
+                            console.log("本地進度領先，已自動補傳雲端");
+                        }
+                    }
+                } catch (e) {
+                    console.log("離線模式，使用本地餘額");
                 }
             }
-        } catch (e) {
-            console.log("離線模式，使用本地餘額");
-        }
-    }
 
-    // 3. 原本的初始化流程
-    initBoardData(); 
-    initGridUI(); 
-    updateUI(); 
-};
+            // 3. 原本的初始化流程
+            initBoardData();
+            initGridUI();
+            updateUI();
+        };
 
-// --- 下方原本的跳轉攔截保持不變 ---
-document.addEventListener('click', async function(e) {
-    let target = e.target.closest('a');
-    if (target && target.href && target.getAttribute('href') !== '#') {
-        const url = target.getAttribute('href');
-        if (!url.startsWith('javascript')) {
-            e.preventDefault();
-            console.log("正在儲存進度...");
-            await syncToFirebase();
-            window.location.assign(url);
-        }
-    }
-}, false);
+        // --- 下方原本的跳轉攔截保持不變 ---
+        document.addEventListener('click', async function (e) {
+            let target = e.target.closest('a');
+            if (target && target.href && target.getAttribute('href') !== '#') {
+                const url = target.getAttribute('href');
+                if (!url.startsWith('javascript')) {
+                    e.preventDefault();
+                    console.log("正在儲存進度...");
+                    await syncToFirebase();
+                    window.location.assign(url);
+                }
+            }
+        }, false);
 
-// 最終保險保持不變
-window.addEventListener('pagehide', function() {
-    localStorage.setItem('sicbo_balance', balance); // 至少本地一定要存到
-    syncToFirebase();
-});
+        // 最終保險保持不變
+        window.addEventListener('pagehide', function () {
+            localStorage.setItem('sicbo_balance', balance); // 至少本地一定要存到
+            syncToFirebase();
+        });
     </script>
 </body>
 

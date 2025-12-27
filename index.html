@@ -231,8 +231,10 @@
     measurementId: "G-MJZ4PGEHSQ"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
 
   function updateMainBalance() {
     const balance = localStorage.getItem('sicbo_balance') || '5000';

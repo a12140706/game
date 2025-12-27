@@ -237,7 +237,9 @@ const firebaseConfig = {
   appId: "1:636332967920:web:29e5600daf4db0ab613f35",
   measurementId: "G-MJZ4PGEHSQ"
 };
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
 
 // --- 核心變數 ---
