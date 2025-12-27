@@ -64,27 +64,44 @@
 
  .game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); 
-    gap: 10px; 
+    /* 將 minmax 從 80px 改為 100px，避免寬螢幕時格子縮太小 */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+    gap: 15px; 
     width: 100%;
     margin-bottom: 20px;
-  }
+}
 
   .game-card {
-    background: var(--card-bg); border: 2px solid #444; border-radius: 12px;
-    overflow: hidden; cursor: pointer; transition: transform 0.2s;
-    display: flex; flex-direction: column; text-decoration: none; color: inherit;
-    aspect-ratio: 1 / 1; 
-  }
+    background: var(--card-bg); 
+    border: 2px solid #444; 
+    border-radius: 12px;
+    overflow: hidden; 
+    cursor: pointer; 
+    transition: transform 0.2s;
+    display: flex; 
+    flex-direction: column; 
+    text-decoration: none; 
+    color: inherit;
+    /* 移除 aspect-ratio: 1/1; 讓內容決定高度，或者改用 min-height */
+    min-height: 120px; 
+}
   .game-card:active { transform: scale(0.95); border-color: var(--gold); }
   
   .game-img { 
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    font-size: clamp(30px, 10dvw, 60px); 
+    height: 70px; /* 給予固定高度或比例 */
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    font-size: clamp(30px, 8dvw, 45px); 
     border-bottom: 1px solid #444;
-  }
+}
 
-  .game-info { padding: 5px; text-align: center; flex-shrink: 0; }
+/* 4. 確保文字資訊始終可見 */
+.game-info { 
+    padding: 8px 5px; 
+    text-align: center; 
+    background: rgba(0,0,0,0.3); /* 稍微加深背景讓文字更清楚 */
+}
   .game-title { font-size: 16px; font-weight: bold; color: var(--gold); }
   .game-desc { font-size: 12px; color: #aaa; display: block; }
 
@@ -341,7 +358,13 @@
 
   async function checkUserStatus() {
     let playerId = localStorage.getItem('player_id');
-    if (!playerId) { /* ...原本的 ID 生成邏輯... */ return; }
+    
+    // --- 關鍵修正：如果沒有 ID，代表是新玩家，直接彈出視窗 ---
+    if (!playerId || playerId === "null") {
+      document.getElementById('nameModal').style.display = 'flex';
+      updateMainBalance();
+      return; 
+    }
 
     try {
         const doc = await db.collection("users").doc(playerId).get();
@@ -352,25 +375,26 @@
 
             localStorage.setItem('player_name', cloudData.name);
 
-            // 只有雲端錢比較多時才覆蓋本地
             if (cloudBal !== undefined && cloudBal > localBal) {
                 localStorage.setItem('sicbo_balance', cloudBal);
             } 
-            // 如果本地錢比較多，代表剛才從遊戲滑掉沒存到雲端，這裡幫它補存
             else if (cloudBal !== undefined && localBal > cloudBal) {
                 await db.collection("users").doc(playerId).update({ balance: localBal });
             }
 
             document.getElementById('welcomeUser').textContent = `歡迎回來，${cloudData.name}`;
             updateMainBalance();
+        } else {
+            // 如果有 ID 但雲端查無資料，也視為新玩家
+            document.getElementById('nameModal').style.display = 'flex';
         }
     } catch (e) {
       console.error("Firebase 連線失敗", e);
-      // 離線狀態：如果本地已經有名字，就直接顯示，不要卡在登入畫面
       const localName = localStorage.getItem('player_name');
       if (localName) {
         document.getElementById('welcomeUser').textContent = `歡迎回來(離線)，${localName}`;
       } else {
+        // 離線狀態且本地也沒存過名字，一定要彈出視窗
         document.getElementById('nameModal').style.display = 'flex';
       }
       updateMainBalance();
