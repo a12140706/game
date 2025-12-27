@@ -392,35 +392,86 @@ function spawnStatus(horseEl, text, type) {
 }
 
 function startRace() {
-  if (isRacing || selectedHorse === null) { if (selectedHorse === null) showMsg("請先選擇馬匹"); return; }
-  let finalBetAmount = (currentBet === 'allin') ? balance : currentBet;
-  if (balance <= 0 || balance < finalBetAmount) { showMsg(balance <= 0 ? "沒錢了" : "餘額不足"); return; }
+  if (isRacing || selectedHorse === null) {
+    if (selectedHorse === null) showMsg("請先選擇馬匹");
+    return;
+  }
 
-  balance -= finalBetAmount; 
-  updateUI(); 
-  saveData(); // 下注瞬間先同步餘額
+  let finalBetAmount = (currentBet === 'allin') ? balance : currentBet;
+
+  if (balance <= 0) { showMsg("你已經沒錢了"); return; }
+  if (balance < finalBetAmount) { showMsg("餘額不足"); return; }
+
+  // --- 資料安全修改：扣錢後立即同步 ---
+  balance -= finalBetAmount;
+  updateUI();
+  saveData(); 
+  // ----------------------------------
+
   isRacing = true;
   document.getElementById('goBtn').disabled = true;
-  document.getElementById('h' + selectedHorse).classList.add('my-horse');
+
+  const myHorseEl = document.getElementById('h' + selectedHorse);
+  myHorseEl.classList.add('my-horse');
   
-  if(!isMuted && isAudioUnlocked) { const raceSnd = document.getElementById('sndRace'); raceSnd.muted = false; raceSnd.play().catch(()=>{}); }
+  if(!isMuted && isAudioUnlocked) {
+      const raceSnd = document.getElementById('sndRace');
+      raceSnd.muted = false; raceSnd.play().catch(()=>{});
+  }
 
   const horses = [1, 2, 3, 4, 5, 6].map(n => {
-    const el = document.getElementById('h' + n); el.classList.add('running');
+    const el = document.getElementById('h' + n);
+    el.classList.add('running');
     const s = horseStats[n];
-    return { id: n, el: el, pos: 10, speed: s.speed, burst: s.burst, stamina: s.stamina, dashCount: 0, maxDashes: s.stamina + 2, isFatigued: false, hasChecked: false };
+    return { 
+        id: n, el: el, pos: 10, 
+        speed: s.speed, burst: s.burst, stamina: s.stamina,
+        dashCount: 0, maxDashes: s.stamina + 2,
+        isFatigued: false, hasChecked: false 
+    };
   });
 
   const trackWidth = document.getElementById('track').clientWidth - 110;
+
   const timer = setInterval(() => {
     let finished = false;
     horses.forEach(h => {
-      if (h.pos > trackWidth * 0.85 && !h.hasChecked) { h.hasChecked = true; if (Math.random() < (6 - h.stamina) * 0.12) { h.isFatigued = true; spawnStatus(h.el, "力竭!!", "tired"); h.el.classList.add('fatigued'); } }
+      if (h.pos > trackWidth * 0.85 && !h.hasChecked) {
+          h.hasChecked = true;
+          if (Math.random() < (6 - h.stamina) * 0.12) {
+              h.isFatigued = true;
+              spawnStatus(h.el, "力竭!!", "tired"); 
+              h.el.classList.add('fatigued');
+          }
+      }
+
       let dashBonus = 0;
-      if (!h.isFatigued && h.dashCount < h.maxDashes) { if (Math.random() < (0.01 + h.burst * 0.008)) { h.dashCount++; dashBonus = (10 + h.burst * 3) + (Math.random() * 20); spawnStatus(h.el, "加速", "dash"); } }
-      let step = ((1.1 + h.speed * 0.15) * (h.isFatigued ? 0.3 : 1.0) + (Math.random() * 4.0)) * 0.5 + (dashBonus * 0.22); 
-      h.pos += step; h.el.style.left = h.pos + 'px'; h.el.style.setProperty('--speed', Math.max(0.1, 0.6 - (step / 6)) + 's');
-      if (h.pos >= trackWidth && !finished) { finished = true; clearInterval(timer); finishRace(h.id, finalBetAmount); }
+      if (!h.isFatigued && h.dashCount < h.maxDashes) {
+          if (Math.random() < (0.01 + h.burst * 0.008)) {
+              h.dashCount++;
+              let minStep = 10 + (h.burst * 3); 
+              dashBonus = minStep + (Math.random() * (45 - minStep)); 
+              // 恢復版本 1 的豐富提示文字
+              spawnStatus(h.el, dashBonus > 35 ? "大衝刺!" : "小加速", "dash");
+          }
+      }
+
+      let fatigueFactor = h.isFatigued ? 0.3 : 1.0; 
+      let baseSpeedValue = 1.1 + (h.speed * 0.15);
+      let baseStep = (baseSpeedValue * fatigueFactor + (Math.random() * 4.0)) * 0.5;
+      let step = baseStep + (dashBonus * 0.22); 
+      
+      h.pos += step;
+      h.el.style.left = h.pos + 'px';
+      
+      let animSpeed = Math.max(0.1, 0.6 - (step / 6));
+      h.el.style.setProperty('--speed', animSpeed + 's');
+
+      if (h.pos >= trackWidth && !finished) {
+        finished = true;
+        clearInterval(timer);
+        finishRace(h.id, finalBetAmount);
+      }
     });
   }, 50);
 }
