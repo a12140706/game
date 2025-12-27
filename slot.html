@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<title>阿記拉霸機</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="阿記娛樂城">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  :root { --gold: #ffd86b; --red: #ff4757; --green: #2ecc71; --cell-size: 85px; }
+  @media (min-width: 768px) { :root { --cell-size: 120px; } }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  body { background: #1a0505; color: #fff; font-family: "Microsoft JhengHei", Arial; display: flex; flex-direction: column; align-items: center; height: 100dvh; width: 100vw; overflow: hidden; transition: background 0.5s; }
+
+  /* 頂部欄 */
+  .topbar { width: 100%; padding-top: calc(15px + env(safe-area-inset-top)); height: calc(60px + env(safe-area-inset-top)); background: linear-gradient(#4a0404, #2a0202); display: flex; align-items: center; padding: 0 15px; gap: 10px; border-bottom: 2px solid #5c0a0a; flex-shrink: 0; }
+  .sound-toggle { background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--gold); cursor: pointer; font-size: 13px; color: #fff; }
+  .balance-box { background: rgba(0,0,0,0.5); border: 1px solid var(--gold); border-radius: 15px; padding: 4px 12px; color: var(--gold); font-weight: bold; font-size: 16px; }
+
+  /* 九宮格遊戲區 */
+  .game-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
+  .slot-machine { background: linear-gradient(#555, #222, #555); padding: 10px; border: 8px solid #333; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 5px; background: #000; }
+
+  .cell { width: var(--cell-size); height: var(--cell-size); background: #fff; border-radius: 5px; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center; }
+  .reel-strip { position: absolute; top: 0; left: 0; width: 100%; display: flex; flex-direction: column; transform: translateY(0); }
+  .strip-item { width: 100%; height: var(--cell-size); display: flex; align-items: center; justify-content: center; font-size: calc(var(--cell-size) * 0.6); color: #000; flex-shrink: 0; }
+
+  .win-glow { animation: win-flash 0.5s infinite alternate; z-index: 10; }
+  @keyframes win-flash { from { background: #fff; } to { background: var(--gold); transform: scale(1.05); } }
+
+  /* 控制區 */
+  .controls { padding-bottom: calc(20px + env(safe-area-inset-bottom)); width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .bet-selector { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); padding: 8px 20px; border-radius: 50px; border: 2px solid #444; }
+  .bet-value { font-size: 24px; font-weight: bold; min-width: 80px; text-align: center; color: var(--gold); }
+  .btn-group { display: flex; gap: 15px; align-items: center; }
+  .spin-btn { width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--gold); background: var(--red); color: #fff; font-size: 22px; font-weight: bold; cursor: pointer; }
+  .spin-btn:disabled { background: #555; }
+  .auto-btn { padding: 10px 20px; border-radius: 10px; border: 1px solid #777; background: #333; color: #fff; font-weight: bold; }
+  .auto-active { background: var(--green); box-shadow: 0 0 15px var(--green); }
+
+  #winText { position: fixed; top: 25%; color: #fff000; font-size: 40px; font-weight: bold; text-shadow: 0 0 15px #f00; display: none; z-index: 100; text-align: center; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="sound-toggle" onclick="toggleMute()" id="soundIcon">🔊</div>
+  <div class="sound-toggle" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
+  <div class="balance-box">💰 <span id="balanceText">0</span></div>
+  <marquee style="flex:1; color:var(--gold); font-size: 12px;">有問題找阿記</marquee>
+  <a href="index.html" style="text-decoration:none;">
+    <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px;">🏠 回大廳</button>
+  </a>
+</div>
+
+<div class="game-area">
+  <div id="winText">BIG WIN!</div>
+  <div class="slot-machine">
+    <div class="grid" id="slotGrid">
+      <div class="cell" id="c0"><div class="reel-strip" id="s0"></div></div>
+      <div class="cell" id="c1"><div class="reel-strip" id="s1"></div></div>
+      <div class="cell" id="c2"><div class="reel-strip" id="s2"></div></div>
+      <div class="cell" id="c3"><div class="reel-strip" id="s3"></div></div>
+      <div class="cell" id="c4"><div class="reel-strip" id="s4"></div></div>
+      <div class="cell" id="c5"><div class="reel-strip" id="s5"></div></div>
+      <div class="cell" id="c6"><div class="reel-strip" id="s6"></div></div>
+      <div class="cell" id="c7"><div class="reel-strip" id="s7"></div></div>
+      <div class="cell" id="c8"><div class="reel-strip" id="s8"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="bet-selector">
+    <button style="background:none; border:none; color:var(--gold); font-size:24px;" onclick="changeBet(-1)">◀</button>
+    <div class="bet-value" id="betDisplay">$1000</div>
+    <button style="background:none; border:none; color:var(--gold); font-size:24px;" onclick="changeBet(1)">▶</button>
+  </div>
+  <div class="btn-group">
+    <button id="autoBtn" class="auto-btn" onclick="toggleAuto()">自動玩</button>
+    <button id="spinBtn" class="spin-btn" onclick="spin()">拉動</button>
+  </div>
+</div>
+
+<audio id="sndSpin" src="https://assets.mixkit.co/active_storage/sfx/2045/2045-preview.mp3" preload="auto"></audio>
+<audio id="sndWin" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
+<audio id="bgm1" src="background-music-434612.mp3" loop preload="auto"></audio>
+<audio id="bgm2" src="soft-background-music-427252.mp3" loop preload="auto"></audio>
+<audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop preload="auto"></audio>
+<audio id="sndSuperWin" src="https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3" preload="auto"></audio>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+// --- Firebase 初始化 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  authDomain: "game-80d68.firebaseapp.com",
+  projectId: "game-80d68",
+  storageBucket: "game-80d68.firebasestorage.app",
+  messagingSenderId: "636332967920",
+  appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+  measurementId: "G-MJZ4PGEHSQ"
+};
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+// --- 核心變數 ---
+let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+const betOptions = [100, 500, 1000, 5000, 10000];
+let currentBetIdx = 2;
+const SYMBOLS = ['🍎', '🍋', '🍒', '🍇', '🔔', '💎', '7️⃣'];
+let isSpinning = false, isAuto = false, isMuted = false;
+let currentBgmIdx = 1;
+const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+const PAYLINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 4, 8], [2, 4, 6]];
+
+// --- 數據存取邏輯 (本地優先，手動同步雲端) ---
+async function saveData(syncToCloud = false) {
+    // 永遠更新本地紀錄
+    localStorage.setItem('sicbo_balance', balance);
+    
+    // 只有特定時刻 (如回大廳) 才上傳雲端，避免頻繁寫入
+    const playerId = localStorage.getItem('player_id');
+    if (syncToCloud && playerId && db) {
+        try {
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log("雲端同步成功");
+        } catch (e) { 
+            console.warn("雲端同步暫緩"); 
+        }
+    }
+}
+
+// --- 初始化與同步邏輯 ---
+window.onload = async () => {
+    initReels();
+
+    // 1. 讀取本地餘額
+    const localBal = localStorage.getItem('sicbo_balance');
+    if (localBal !== null) balance = parseFloat(localBal);
+
+    // 2. 比對雲端餘額 (取多者)
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const cloudBal = doc.data().balance;
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                    localStorage.setItem('sicbo_balance', balance);
+                } else if (cloudBal !== undefined && balance > cloudBal) {
+                    // 如果本地比較多，異步幫雲端更新一下
+                    saveData(true);
+                }
+            }
+        } catch (e) { console.log("離線模式運作中"); }
+    }
+    updateUI();
+
+    // 3. 攔截所有連結，點擊跳轉前強制同步雲端
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                await saveData(true); // 強制雲端同步
+                window.location.href = href;
+            }
+        });
+    });
+};
+
+// 處理滑掉/關閉分頁 (最後一次本地備份)
+window.addEventListener('pagehide', () => {
+    localStorage.setItem('sicbo_balance', balance);
+});
+
+// --- 遊戲初始化 ---
+function initReels() {
+  for(let i=0; i<9; i++) {
+    const strip = document.getElementById('s'+i);
+    let html = '';
+    for(let j=0; j<20; j++) {
+      html += `<div class="strip-item">${SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]}</div>`;
+    }
+    strip.innerHTML = html;
+  }
+}
+
+// --- 背景音樂與音效控制 ---
+function stopAllBGM() {
+    bgmList.forEach(id => { 
+        if(id) { 
+            const a = document.getElementById(id); 
+            if(a) { a.pause(); a.currentTime = 0; }
+        } 
+    });
+}
+
+function cycleBGM() {
+    stopAllBGM();
+    currentBgmIdx = (currentBgmIdx + 1) % 4;
+    const btn = document.getElementById('bgmBtn');
+    if (currentBgmIdx === 0) {
+        btn.textContent = '🚫 音樂關';
+    } else {
+        btn.textContent = '🎵 音樂 ' + currentBgmIdx;
+        if (!isMuted) {
+            const bgm = document.getElementById(bgmList[currentBgmIdx]);
+            if(bgm) { bgm.volume = 0.3; bgm.play().catch(()=>{}); }
+        }
+    }
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('soundIcon').textContent = isMuted ? '🔇' : '🔊';
+    if (isMuted) stopAllBGM();
+    else if (currentBgmIdx !== 0) {
+        const bgm = document.getElementById(bgmList[currentBgmIdx]);
+        if(bgm) bgm.play().catch(()=>{});
+    }
+}
+
+function unlockAudio() {
+    const audios = document.querySelectorAll('audio');
+    audios.forEach(a => {
+        a.muted = true;
+        a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => {});
+    });
+    setTimeout(() => {
+        if (!isMuted && currentBgmIdx !== 0) {
+            const bgm = document.getElementById(bgmList[currentBgmIdx]);
+            if (bgm) { bgm.volume = 0.3; bgm.play().catch(() => {}); }
+        }
+    }, 150);
+    document.removeEventListener('click', unlockAudio);
+    document.removeEventListener('touchstart', unlockAudio);
+}
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio);
+
+// --- 遊戲邏輯 ---
+function updateUI() {
+  document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
+  document.getElementById('betDisplay').textContent = "$" + betOptions[currentBetIdx];
+}
+
+function changeBet(dir) {
+  if (isSpinning) return;
+  currentBetIdx = Math.max(0, Math.min(betOptions.length - 1, currentBetIdx + dir));
+  updateUI();
+}
+
+function toggleAuto() {
+  isAuto = !isAuto;
+  document.getElementById('autoBtn').classList.toggle('auto-active', isAuto);
+  if (isAuto && !isSpinning) spin();
+}
+
+function spin() {
+  const cost = betOptions[currentBetIdx];
+  if (balance < cost) { 
+    alert("謀吉阿"); 
+    isAuto = false; 
+    document.getElementById('autoBtn').classList.remove('auto-active'); 
+    return; 
+  }
+  
+  isSpinning = true; 
+  balance -= cost; 
+  updateUI();
+  saveData(); // 平常轉動只存本地
+
+  document.getElementById('spinBtn').disabled = true;
+  document.querySelectorAll('.cell').forEach(c => c.classList.remove('win-glow'));
+  document.getElementById('winText').style.display = 'none';
+  if(!isMuted) document.getElementById('sndSpin').play().catch(()=>{});
+
+  const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+  let finalSymbols = [];
+
+  for(let i=0; i<9; i++) {
+    const strip = document.getElementById('s'+i);
+    const targetSymbol = SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+    finalSymbols.push(targetSymbol);
+    strip.lastElementChild.textContent = targetSymbol;
+    
+    const duration = 1000 + (i % 3) * 200 + Math.random() * 300;
+    strip.style.transition = `transform ${duration}ms cubic-bezier(0.45, 0.05, 0.55, 0.95)`;
+    strip.style.transform = `translateY(-${(strip.children.length - 1) * cellSize}px)`;
+
+    if(i === 8) {
+      setTimeout(() => finalize(finalSymbols), duration + 100);
+    }
+  }
+}
+
+function finalize(results) {
+  const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+  for(let i=0; i<9; i++) {
+    const strip = document.getElementById('s'+i);
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateY(0)';
+    for(let j=0; j<strip.children.length; j++) {
+      strip.children[j].textContent = (j === 0) ? results[i] : SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+    }
+  }
+
+  let totalWinMultiplier = 0;
+  let winCells = new Set();
+
+  PAYLINES.forEach(line => {
+    const [a, b, c] = line;
+    if (results[a] === results[b] && results[b] === results[c]) {
+      let symbol = results[a];
+      let mult = (symbol === '7️⃣') ? 50 : (symbol === '💎' ? 30 : (symbol === '🔔' ? 10 : 3));
+      totalWinMultiplier += mult;
+      line.forEach(idx => winCells.add(idx));
+    }
+  });
+
+  const isFullHouse = results.every(s => s === results[0]);
+  if (isFullHouse) totalWinMultiplier *= 10; 
+
+  if (totalWinMultiplier > 0) {
+    let winAmt = betOptions[currentBetIdx] * totalWinMultiplier;
+    balance += winAmt;
+    const winDisplay = document.getElementById('winText');
+    winCells.forEach(idx => document.getElementById('c'+idx).classList.add('win-glow'));
+    
+    if (isFullHouse) {
+      winDisplay.innerHTML = `🎊 SUPER WIN 🎊<br>$${winAmt.toLocaleString()}`;
+      winDisplay.style.color = "#ff3e3e";
+      winDisplay.style.fontSize = "50px";
+      if(!isMuted) {
+        document.getElementById('sndWin').play().catch(()=>{});
+        let c = 0; let t = setInterval(() => {
+          document.getElementById('sndSuperWin').cloneNode().play().catch(()=>{});
+          if(++c >= 10) clearInterval(t);
+        }, 150);
+      }
+    } else {
+      winDisplay.textContent = `WIN $${winAmt.toLocaleString()}!`;
+      winDisplay.style.color = "#fff000";
+      winDisplay.style.fontSize = "40px";
+      if(!isMuted) document.getElementById('sndWin').play().catch(()=>{});
+    }
+    winDisplay.style.display = 'block';
+  }
+
+  isSpinning = false;
+  document.getElementById('spinBtn').disabled = false;
+  updateUI();
+  saveData(); // 中獎加錢只存本地
+  if (isAuto) setTimeout(spin, 1500);
+}
+</script>
+</body>
+</html>

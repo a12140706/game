@@ -335,9 +335,8 @@
     <div class="topbar">
         <div class="audio-ctrl" onclick="toggleMute()" id="muteBtn">🔊</div>
         <div class="audio-ctrl" onclick="cycleBGM()" id="bgmBtn">🎵 音樂1</div>
-        <button onclick="showRank()" style="background:#ccac00; border:none; border-radius:12px; padding:3px 8px; color:#000; font-size:11px; font-weight:bold;">🏆 排行</button>
         <div class="balance-box">💎 <span id="balanceText">0</span></div>
-        <marquee style="flex:1; color:var(--gold); font-size: 11px;">有問題找阿記</marquee>
+        <button onclick="showRank()" style="background:#ccac00; border:none; border-radius:12px; padding:3px 8px; color:#000; font-size:11px; font-weight:bold;">🏆 排行</button>
         <a href="index.html" style="text-decoration:none;">
             <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px; font-weight:bold;">🏠 回大廳</button>
         </a>
@@ -379,7 +378,7 @@
 
     <div id="rankModal" class="rank-modal">
         <div class="rank-content">
-            <div class="rank-header">愛心連連看 - 最高獎金榜</div>
+            <div class="rank-header">愛心最高獎金榜</div>
             <div id="rankList" class="rank-list"></div>
         </div>
         <button class="close-rank" onclick="closeRank()">關閉</button>

@@ -80,7 +80,7 @@
 <div class="portrait-tip"><div>🔄</div><p style="margin-top:20px;">請橫屏遊玩</p></div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑英雄榜 (玩家最高紀錄)</div>
+    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑開獎最高紀錄榜</div>
     <div class="rank-list-container" id="rankList"></div>
     <button class="sound-btn" style="margin-top:20px; padding:10px 30px; font-size:16px;" onclick="closeRank()">關閉</button>
 </div>
@@ -89,13 +89,13 @@
   <div class="sound-controls">
     <button class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</button>
     <button class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</button>
+    <div class="balance-display">💎 <span id="balanceText">----</span></div>
   </div>
   <div style="background:linear-gradient(#b91c1c, #7f1d1d); border:1px solid var(--btn-gold); border-radius:20px; padding:5px 15px; cursor:pointer; display:flex; gap:8px; align-items:center; z-index:101;" onclick="openRank()">
-      <span style="font-size:12px; color:#fff; font-weight:bold;">🏆 全服最高:</span>
+      <span style="font-size:12px; color:#fff; font-weight:bold;">🏆排行榜</span>
       <span id="topWinnerName" style="font-size:13px; color:var(--btn-gold); font-weight:bold;">讀取中...</span>
   </div>
   <div class="stats-group">
-    <div class="balance-display">💎 <span id="balanceText">----</span></div>
     <a href="index.html" style="text-decoration:none;"><button class="sound-btn">🏠 回大廳</button></a>
   </div>
 </div>
@@ -112,7 +112,7 @@
     <button class="bet-btn" onclick="changeBet(1)">▶</button>
   </div>
   <button id="autoBtn" class="auto-btn" onclick="toggleAuto()">自動玩</button>
-  <button class="spin-btn" id="spinBtn" onclick="handleFirstClick(); startSpin();">拉吧</button>
+  <button class="spin-btn" id="spinBtn" onclick="handleFirstClick(); startSpin();">SPIN</button>
   <div class="win-display">WIN: <span id="winAmount">0</span></div>
   <div class="miss-display">未開：<span id="missCountText">0</span> 局</div>
 </div>
