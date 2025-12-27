@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+        content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+    <title>連連看</title>
+    <style>
+        :root {
+            --table-green: #0a5c32;
+            --gold: #ffd86b;
+            --bg-dark: #05140b;
+            --tile-size: 54px;
+            --tile-gap: 6px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0; padding: 0;
+            touch-action: none; 
+        }
+
+        body {
+            height: 100dvh; width: 100vw; font-family: "Microsoft JhengHei", Arial;
+            background: var(--bg-dark); color: #fff; display: flex; flex-direction: row; overflow: hidden;
+        }
+
+        @media (orientation: portrait) {
+            .portrait-tip {
+                position: fixed; inset: 0; background: #1a0505; z-index: 9999;
+                display: flex; flex-direction: column; justify-content: center; align-items: center;
+            }
+        }
+        @media (orientation: landscape) { .portrait-tip { display: none; } }
+
+        .topbar {
+            width: 110px; height: 100%; background: linear-gradient(to bottom, #4a0404, #2a0202);
+            display: flex; flex-direction: column; align-items: center;
+            padding: env(safe-area-inset-top) 8px env(safe-area-inset-bottom) 8px;
+            gap: 8px; border-left: 2px solid #5c0a0a; z-index: 1000; order: 2;
+        }
+
+        .btn-tool, select {
+            width: 100%; text-align: center; padding: 8px 2px;
+            background: #333; color: #fff; border: 1px solid #777;
+            border-radius: 5px; font-size: 11px; cursor: pointer;
+        }
+
+        .btn-gravity { background: #5c0a0a; border-color: var(--gold); color: var(--gold); font-weight: bold; }
+
+        .info-box {
+            width: 95%; text-align: center; padding: 4px; font-size: 10px; 
+            background: rgba(0,0,0,0.4); border-radius: 5px; border: 1px solid #444;
+        }
+
+        .main-layout { flex: 1; height: 100%; display: flex; justify-content: center; align-items: center; order: 1; position: relative; }
+
+        #game-board {
+            width: calc(10 * (var(--tile-size) + var(--tile-gap)) + 30px);
+            height: calc(6 * (var(--tile-size) + var(--tile-gap)) + 30px);
+            background: var(--table-green); border: 4px solid #084325;
+            border-radius: 15px; position: relative;
+        }
+
+        #line-canvas {
+            position: absolute; top: -35px; left: -35px;
+            width: calc(100% + 70px); height: calc(100% + 70px);
+            pointer-events: none; z-index: 500;
+        }
+
+        .tile {
+            position: absolute; width: var(--tile-size); height: var(--tile-size);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; border-radius: 8px;
+            transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+                        top 0.4s cubic-bezier(0.25, 1, 0.5, 1), 
+                        transform 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+
+        .tile.eliminating { transform: scale(0) !important; opacity: 0 !important; pointer-events: none; }
+        .layer-3 { z-index: 40; background: #2ecc71; transform: translateY(-12px); box-shadow: 0 8px 0 #1e8449; }
+        .layer-2 { z-index: 30; background: #e67e22; transform: translateY(-8px); box-shadow: 0 6px 0 #a05817; }
+        .layer-1 { z-index: 20; background: #254879; transform: translateY(-4px); box-shadow: 0 4px 0 #1a222c; }
+        .layer-0.unlocked { z-index: 10; background: #2d3a4d; transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .covered { background: #1a222c !important; opacity: 0.4 !important; pointer-events: none; }
+        .selected { outline: 4px solid #fff; transform: scale(1.15) translateY(-15px) !important; z-index: 100 !important; }
+
+        .floating-score { position: absolute; font-weight: bold; font-size: 24px; pointer-events: none; z-index: 600; animation: floatUp 0.7s forwards; text-shadow: 0 2px 4px #000; }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
+
+        /* 修復：Combo文字改為 fixed 避免被切掉，並增加動畫感 */
+        .combo-text {
+            position: fixed; top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--gold); font-size: 48px; font-weight: bold; font-style: italic;
+            text-shadow: 3px 3px 0px #000, 0 0 20px rgba(255,216,107,0.5);
+            pointer-events: none; z-index: 2000;
+            animation: comboPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes comboPop { 
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 
+            80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -60%) scale(1); opacity: 0; }
+        }
+
+        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 3000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+    </style>
+</head>
+
+<body>
+    <div class="portrait-tip">請橫著玩</div>
+    
+    <div class="topbar">
+        <a href="index.html" style="text-decoration:none;">
+            <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px; font-weight:bold;">🏠 回大廳</button>
+        </a>
+        <div class="btn-tool" onclick="toggleMute()" id="soundIcon">🔊</div>
+        <div class="btn-tool" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
+        <select id="layerSelect" onchange="initMap()">
+            <option value="2">2 層 (x1.0)</option>
+            <option value="3">3 層 (x1.5)</option>
+            <option value="4">4 層 (x2.0)</option>
+        </select>
+        <div class="btn-tool btn-gravity" onclick="toggleGravityMode()" id="gravBtn">🌌 重力: 關</div>
+        <div class="info-box">🏆 最高紀錄<br><span id="highScoreText" style="color:var(--gold)">0</span></div>
+        <div class="info-box">💎 <br><span id="balanceText">0</span></div>
+        <div style="flex:1;"></div>
+        <button class="btn-tool" onclick="manualShuffle()" style="background:#4a90e2; color:#fff; font-weight:bold; margin-bottom: 5px;">🔄洗牌💎500</button>
+        <button class="btn-tool" onclick="initMap()" style="background:var(--gold); color:#000; font-weight:bold;">重新開始</button>
+    </div>
+
+    <div class="main-layout">
+        <div id="game-board">
+            <canvas id="line-canvas"></canvas>
+        </div>
+        <div id="combo-container"></div>
+    </div>
+
+    <div id="settle-screen" class="modal">
+        <div style="background:#1a1a1a; border:2px solid var(--gold); padding:30px; border-radius:20px; text-align:center; min-width: 250px;">
+            <h1 style="color:var(--gold); margin-bottom: 10px;">🎉 過關!</h1>
+            <p id="reward-text" style="color:#fff; line-height: 1.6; margin-bottom: 20px; text-align: left; padding: 0 20px;"></p>
+            <button class="btn-tool" onclick="closeSettle()" style="background:var(--gold); color:#000; width:auto; padding:10px 40px; font-weight:bold;">繼續挑戰</button>
+        </div>
+    </div>
+
+    <audio id="sndChip" src="https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3" preload="auto"></audio>
+    <audio id="sndWin" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
+    <audio id="bgm1" src="background-music-434612.mp3" loop preload="auto"></audio>
+    <audio id="bgm2" src="soft-background-music-427252.mp3" loop preload="auto"></audio>
+    <audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop preload="auto"></audio>
+
+    <script>
+        const ROWS = 6, COLS = 10;
+        const DESSERTS = ['🍓', '🍎', '🍰', '🍇', '🍬', '🍭', '🍩', '🍮', '🍯', '🍪', '🧁', '🍒'];
+        let boardData = [], firstSelect = null, score = 0, tilesLeft = 0;
+        let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+        let highScore = parseInt(localStorage.getItem('link_high_score')) || 0;
+        let isMuted = false, currentBgmIdx = 1, isGravityEnabled = false;
+        const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+
+        let comboCount = 0;
+        let lastMatchTime = 0;
+        const COMBO_TIMEOUT = 2000; 
+
+        function playSound(id) { if (!isMuted) { const s = document.getElementById(id); if (s) { s.currentTime = 0; s.play().catch(()=>{}); } } }
+        function toggleMute() { isMuted = !isMuted; document.getElementById('soundIcon').textContent = isMuted ? '🔇' : '🔊'; }
+        
+        function cycleBGM() {
+            bgmList.forEach(id => { if (id) { const a = document.getElementById(id); a.pause(); a.currentTime = 0; } });
+            currentBgmIdx = (currentBgmIdx + 1) % 4;
+            const btn = document.getElementById('bgmBtn');
+            if (currentBgmIdx === 0) btn.textContent = '🚫 音樂關';
+            else {
+                const bgm = document.getElementById(bgmList[currentBgmIdx]);
+                if (bgm) { bgm.volume = 0.3; bgm.play().catch(() => {}); btn.textContent = '🎵 音樂 ' + currentBgmIdx; }
+            }
+        }
+
+        function playFailSound() {
+            if (isMuted) return;
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        function toggleGravityMode() {
+            isGravityEnabled = !isGravityEnabled;
+            const btn = document.getElementById('gravBtn');
+            btn.textContent = isGravityEnabled ? '🌌 重力: 開 (x1.5)' : '🌌 重力: 關';
+            btn.className = isGravityEnabled ? 'btn-tool btn-gravity' : 'btn-tool';
+        }
+
+        function initMap() {
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            score = 0; tilesLeft = ROWS * COLS * layers;
+            comboCount = 0; 
+            updateUI();
+            let pool = [];
+            for (let i = 0; i < (tilesLeft / 2); i++) {
+                const char = DESSERTS[Math.floor(Math.random() * DESSERTS.length)];
+                const style = ['🍮', '🍯', '🍪', '🧁'].includes(char) ? 'heart-gold' : (['🍇', '🍬', '🍭', '🍩'].includes(char) ? 'heart-purple' : 'heart-red');
+                pool.push({ char, style }, { char, style });
+            }
+            pool.sort(() => Math.random() - 0.5);
+            boardData = [];
+            for (let l = 0; l < layers; l++) {
+                boardData[l] = [];
+                for (let r = 0; r < ROWS; r++) {
+                    boardData[l][r] = [];
+                    for (let c = 0; c < COLS; c++) { 
+                        let item = pool.pop();
+                        if (l > 0 && boardData[l-1][r][c].char === item.char) {
+                            pool.unshift(item);
+                            item = pool.pop();
+                        }
+                        boardData[l][r][c] = { ...item, cleared: false, id: `t-${l}-${r}-${c}` }; 
+                    }
+                }
+            }
+            renderBoard(true);
+            setTimeout(checkDeadlock, 1000);
+        }
+
+        function renderBoard(fullRedraw = false) {
+            const container = document.getElementById('game-board');
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            if (fullRedraw) {
+                container.querySelectorAll('.tile').forEach(t => t.remove());
+                const canvas = document.getElementById('line-canvas');
+                canvas.width = container.offsetWidth + 70; canvas.height = container.offsetHeight + 70;
+            }
+
+            for (let l = 0; l < layers; l++) {
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const data = boardData[l][r][c];
+                        let tile = document.getElementById(data.id);
+                        if (data.cleared) { if (tile) tile.remove(); continue; }
+                        if (!tile) {
+                            tile = document.createElement('div'); tile.id = data.id;
+                            container.appendChild(tile);
+                        }
+                        let isCovered = false;
+                        for (let ul = l + 1; ul < layers; ul++) { if (!boardData[ul][r][c].cleared) { isCovered = true; break; } }
+                        tile.className = `tile layer-${l} ${isCovered ? 'covered' : 'unlocked ' + data.style}`;
+                        tile.innerText = isCovered ? "" : data.char;
+                        tile.style.left = (c * 60 + 15) + 'px';
+                        tile.style.top = (r * 60 + 15) + 'px';
+                        tile.onpointerdown = (e) => { e.preventDefault(); if (!isCovered) handleSelect(l, r, c, tile); };
+                    }
+                }
+            }
+        }
+
+        function checkDeadlock() {
+            if (tilesLeft === 0) return;
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            let available = [];
+            for (let l = 0; l < layers; l++) {
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (boardData[l][r][c].cleared) continue;
+                        let isCovered = false;
+                        for (let ul = l + 1; ul < layers; ul++) { if (!boardData[ul][r][c].cleared) { isCovered = true; break; } }
+                        if (!isCovered) available.push({ l, r, c, char: boardData[l][r][c].char });
+                    }
+                }
+            }
+            let hasMove = false;
+            for (let i = 0; i < available.length; i++) {
+                for (let j = i + 1; j < available.length; j++) {
+                    if (available[i].char === available[j].char) {
+                        if (getPath(available[i].r, available[i].c, available[j].r, available[j].c)) {
+                            hasMove = true; break;
+                        }
+                    }
+                }
+                if (hasMove) break;
+            }
+            if (!hasMove) {
+                showShuffleNotice();
+                shuffleBoard();
+            }
+        }
+        function showShuffleNotice() {
+            const container = document.getElementById('notice-container');
+            const div = document.createElement('div');
+            div.className = 'shuffle-notice';
+            div.innerText = "無解，自動洗牌...";
+            container.appendChild(div);
+            setTimeout(() => { if(div) div.remove(); }, 1200);
+        }
+        // --- 新增：手動洗牌功能 ---
+// --- 修改後：手動洗牌功能 (無視窗直發版) ---
+function manualShuffle() {
+    if (tilesLeft === 0) return;
+    
+    // 檢查餘額是否足夠
+    if (balance < 500) {
+        // 餘額不足還是需要一個簡單提示，否則玩家點了沒反應會以為壞掉
+        const container = document.getElementById('combo-container');
+        const div = document.createElement('div');
+        div.className = 'combo-text';
+        div.style.color = '#ff4757';
+        div.innerText = "餘額不足!";
+        container.appendChild(div);
+        setTimeout(() => { if(div) div.remove(); }, 800);
+        return;
+    }
+
+    // 直接扣錢並執行
+    balance -= 500;
+    updateUI();
+    localStorage.setItem('sicbo_balance', balance); // 同步保存餘額
+    
+    // 視覺回饋
+    const container = document.getElementById('combo-container');
+    const div = document.createElement('div');
+    div.className = 'combo-text';
+    div.style.color = '#4a90e2';
+    div.innerText = "重新排列!";
+    container.appendChild(div);
+    setTimeout(() => { if(div) div.remove(); }, 800);
+
+    shuffleBoard();
+    playSound('sndChip');
+}
+       function shuffleBoard() {
+    let pool = [];
+    const layers = parseInt(document.getElementById('layerSelect').value);
+    
+    // 1. 收集所有剩餘方塊的圖案與樣式
+    for (let l = 0; l < layers; l++) {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (!boardData[l][r][c].cleared) {
+                    pool.push({ char: boardData[l][r][c].char, style: boardData[l][r][c].style });
+                    boardData[l][r][c].cleared = true; // 先全部清空標記
+                }
+            }
+        }
+    }
+
+    if (pool.length === 0) return;
+    pool.sort(() => Math.random() - 0.5);
+
+    // 2. 收集所有可用的座標 (l, r, c) 並打亂
+    let availableSpots = [];
+    for (let l = 0; l < layers; l++) {
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                availableSpots.push({ l, r, c });
+            }
+        }
+    }
+    availableSpots.sort(() => Math.random() - 0.5);
+
+    // 3. 將方塊重新填入隨機的位置，確保「空間打散」
+    pool.forEach((item, index) => {
+        const spot = availableSpots[index];
+        boardData[spot.l][spot.r][spot.c] = {
+            ...item,
+            cleared: false,
+            id: `t-${spot.l}-${spot.r}-${spot.c}`
+        };
+    });
+
+    renderBoard(true); // 強制重新繪製所有 DOM
+    setTimeout(checkDeadlock, 1000);
+}
+
+        function handleSelect(l, r, c, el) {
+            if (firstSelect && firstSelect.id === el.id) { el.classList.remove('selected'); firstSelect = null; return; }
+            if (!firstSelect) {
+                firstSelect = { l, r, c, id: el.id, char: boardData[l][r][c].char };
+                el.classList.add('selected'); return;
+            }
+
+            const p1 = firstSelect;
+            const path = (p1.char === boardData[l][r][c].char) ? getPath(p1.r, p1.c, r, c) : null;
+
+            if (path) {
+                const now = Date.now();
+                if (now - lastMatchTime < COMBO_TIMEOUT) {
+                    comboCount++;
+                } else {
+                    comboCount = 1;
+                }
+                lastMatchTime = now;
+
+                const el1 = document.getElementById(p1.id);
+                el1.classList.add('eliminating'); el.classList.add('eliminating');
+                drawConnectLine(path);
+
+                let baseBonus = boardData[l][r][c].style === 'heart-gold' ? 50 : (boardData[l][r][c].style === 'heart-purple' ? 20 : 10);
+                let comboMult = 1 + (comboCount - 1) * 0.1;
+                let finalBonus = Math.floor(baseBonus * comboMult);
+
+                showFloatingScore(p1.r, p1.c, finalBonus); 
+                showFloatingScore(r, c, finalBonus);
+                if (comboCount > 1) showComboUI(comboCount);
+
+                boardData[p1.l][p1.r][p1.c].cleared = true; boardData[l][r][c].cleared = true;
+                score += (finalBonus * 2); 
+                tilesLeft -= 2;
+                playSound('sndChip'); firstSelect = null;
+                
+                setTimeout(() => { 
+                    if (isGravityEnabled) applyGravityEffect(); 
+                    renderBoard(); 
+                    if (tilesLeft === 0) showSettle(); 
+                    else checkDeadlock();
+                }, 250);
+            } else {
+                playFailSound();
+                document.getElementById(p1.id)?.classList.remove('selected');
+                el.classList.add('selected');
+                firstSelect = { l, r, c, id: el.id, char: boardData[l][r][c].char };
+            }
+        }
+
+        function showComboUI(count) {
+            const container = document.getElementById('combo-container');
+            container.innerHTML = "";
+            const div = document.createElement('div');
+            div.className = 'combo-text';
+            div.innerText = `${count} COMBO!`;
+            container.appendChild(div);
+            setTimeout(() => { if(div) div.remove(); }, 800);
+        }
+
+        function getPath(r1, c1, r2, c2) {
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            const isEmpty = (r, c) => {
+                if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+                for(let l=0; l<layers; l++) if(!boardData[l][r][c].cleared) return false;
+                return true;
+            };
+            const checkStraight = (r1, c1, r2, c2) => {
+                if (r1 !== r2 && c1 !== c2) return false;
+                if (r1 === r2) { for (let c = Math.min(c1, c2) + 1; c < Math.max(c1, c2); c++) if (!isEmpty(r1, c)) return false; }
+                else { for (let r = Math.min(r1, r2) + 1; r < Math.max(r1, r2); r++) if (!isEmpty(r, c1)) return false; }
+                return true;
+            };
+            if (checkStraight(r1, c1, r2, c2)) return [{ r: r1, c: c1 }, { r: r2, c: c2 }];
+            if (isEmpty(r1, c2) && checkStraight(r1, c1, r1, c2) && checkStraight(r1, c2, r2, c2)) return [{ r: r1, c: c1 }, { r: r1, c: c2 }, { r: r2, c: c2 }];
+            if (isEmpty(r2, c1) && checkStraight(r1, c1, r2, c1) && checkStraight(r2, c1, r2, c2)) return [{ r: r1, c: c1 }, { r: r2, c: c1 }, { r: r2, c: c2 }];
+            for (let i = -1; i <= ROWS; i++) {
+                if (isEmpty(i, c1) && isEmpty(i, c2) && checkStraight(r1, c1, i, c1) && checkStraight(i, c1, i, c2) && checkStraight(i, c2, r2, c2)) return [{ r: r1, c: c1 }, { r: i, c: c1 }, { r: i, c: c2 }, { r: r2, c: c2 }];
+            }
+            for (let j = -1; j <= COLS; j++) {
+                if (isEmpty(r1, j) && isEmpty(r2, j) && checkStraight(r1, c1, r1, j) && checkStraight(r1, j, r2, j) && checkStraight(r2, j, r2, c2)) return [{ r: r1, c: c1 }, { r: r1, c: j }, { r: r2, c: j }, { r: r2, c: c2 }];
+            }
+            return null;
+        }
+
+        function applyGravityEffect() {
+            const dir = ['UP', 'DOWN', 'LEFT', 'RIGHT'][Math.floor(Math.random() * 4)];
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            for (let l = 0; l < layers; l++) {
+                if (dir === 'DOWN') { for (let c = 0; c < COLS; c++) { for (let r = ROWS-1, e = ROWS-1; r >= 0; r--) if (!boardData[l][r][c].cleared) { let t = boardData[l][r][c]; boardData[l][r][c] = {cleared:true}; boardData[l][e][c] = t; e--; } } }
+                else if (dir === 'UP') { for (let c = 0; c < COLS; c++) { for (let r = 0, e = 0; r < ROWS; r++) if (!boardData[l][r][c].cleared) { let t = boardData[l][r][c]; boardData[l][r][c] = {cleared:true}; boardData[l][e][c] = t; e++; } } }
+                else if (dir === 'LEFT') { for (let r = 0; r < ROWS; r++) { for (let c = 0, e = 0; c < COLS; c++) if (!boardData[l][r][c].cleared) { let t = boardData[l][r][c]; boardData[l][r][c] = {cleared:true}; boardData[l][r][e] = t; e++; } } }
+                else if (dir === 'RIGHT') { for (let r = 0; r < ROWS; r++) { for (let c = COLS-1, e = COLS-1; c >= 0; c--) if (!boardData[l][r][c].cleared) { let t = boardData[l][r][c]; boardData[l][r][c] = {cleared:true}; boardData[l][r][e] = t; e--; } } }
+            }
+        }
+
+        function drawConnectLine(path) {
+            const canvas = document.getElementById('line-canvas'); const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineWidth = 6; ctx.strokeStyle = '#fff';
+            ctx.beginPath(); path.forEach((p, i) => { const x = p.c * 60 + 27 + 15 + 35; const y = p.r * 60 + 27 + 15 + 35; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+            ctx.stroke(); setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 200);
+        }
+
+        function showFloatingScore(r, c, val) {
+            const f = document.createElement('div'); f.className = 'floating-score'; f.innerText = `+${val}`;
+            f.style.left = `${c * 60 + 20}px`; f.style.top = `${r * 60 + 10}px`;
+            document.getElementById('game-board').appendChild(f); setTimeout(() => f.remove(), 700);
+        }
+
+        function updateUI() { 
+            document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString(); 
+            document.getElementById('highScoreText').textContent = highScore.toLocaleString();
+        }
+
+        function showSettle() {
+            playSound('sndWin');
+            const layers = parseInt(document.getElementById('layerSelect').value);
+            let layerMult = layers === 3 ? 1.5 : (layers === 4 ? 2.0 : 1.0);
+            let gravMult = isGravityEnabled ? 1.5 : 1.0;
+            const finalReward = Math.floor(score * layerMult * gravMult * 15);
+            
+            balance += finalReward;
+            localStorage.setItem('sicbo_balance', balance);
+
+            let isNewRecord = false;
+            if (score > highScore) { highScore = score; localStorage.setItem('link_high_score', highScore); isNewRecord = true; }
+            updateUI();
+
+            let msg = `本局得分：${score}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
+            msg += `最高紀錄：${highScore}\n`;
+            msg += `-------------------\n`;
+            msg += `層數倍率：x${layerMult}\n`;
+            if(isGravityEnabled) msg += `重力倍率：x1.5\n`;
+            msg += `結算獲得：+${finalReward} 💎`;
+
+            document.getElementById('reward-text').innerText = msg;
+            document.getElementById('settle-screen').style.display = 'flex';
+        }
+
+        function closeSettle() { document.getElementById('settle-screen').style.display = 'none'; initMap(); }
+
+        document.addEventListener('click', function unlock() {
+            const audios = document.querySelectorAll('audio');
+            audios.forEach(a => { a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => { }); });
+            setTimeout(() => { if (currentBgmIdx === 1) { const b1 = document.getElementById('bgm1'); b1.volume = 0.3; b1.play().catch(() => { }); } }, 150);
+            document.removeEventListener('click', unlock);
+        }, { once: true });
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
