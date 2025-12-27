@@ -438,6 +438,7 @@ const db = firebase.firestore();
             setTimeout(checkDeadlock, 1000);
         }
         // 顯示排行榜邏輯
+        // 顯示排行榜邏輯
         async function showLeaderboard() {
             const screen = document.getElementById('rank-screen');
             const container = document.getElementById('rank-list-container');
@@ -458,7 +459,7 @@ const db = firebase.firestore();
                     const isMe = doc.id === localStorage.getItem('player_id');
                     html += `
                 <div class="rank-item" style="${isMe ? 'background:rgba(255,216,107,0.1);' : ''}">
-                    <span>${rank}. ${data.nickname || '玩家'} ${isMe ? '(我)' : ''}</span>
+                    <span>${rank}. ${data.nickname || '玩家'}</span>
                     <span class="rank-gold">${(data.link_score || 0).toLocaleString()}</span>
                 </div>`;
                     rank++;
