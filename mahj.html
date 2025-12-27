@@ -521,7 +521,7 @@ async function checkMatches() {
     if (toEliminate.size > 0) {
         combo++; 
         if(!isMuted) document.getElementById('sndMatch').play();
-        let win = toEliminate.size * (betOptions[currentBetIdx] / 50) * currentMultiplier;
+        let win = toEliminate.size * (betOptions[currentBetIdx] / 30) * currentMultiplier;
         
         if (document.getElementById('mainBody').classList.contains('in-free')) {
             freeGameTotalWin += win;
