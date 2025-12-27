@@ -415,66 +415,169 @@ function playBGM() {
 }
 
 async function startSpin() {
-  if (isSpinning) return;
-  isSpinning = true; combo = 0; winThisSpin = 0; updateUI();
-  if (freeSpins > 0) {
-    freeSpins--; document.getElementById('mainBody').classList.add('in-free');
-    await runMultiplierDraw();
-  } else if (!freeSpins && document.getElementById('mainBody').classList.contains('in-free')) {
-    await finalizeFreeGame(); return;
-  } else {
-    if(balance < betOptions[currentBetIdx]) { isSpinning=false; isAuto=false; alert("餘額不足"); return; }
-    balance -= betOptions[currentBetIdx]; roundsSinceFree++; 
-    currentMultiplier = 1; freeGameTotalWin = 0;
-    saveData();
-  }
-  if(!isMuted) document.getElementById('sndSpin').play();
-  for (let r=0; r<4; r++) {
-    for (let c=0; c<4; c++) {
-      const t = document.getElementById(`tile-${r}-${c}`);
-      t.style.opacity = '0'; t.classList.remove('tile-drop', 'eliminating');
-      board[r][c] = getRandomTile(r, c); 
-      setTimeout(() => { drawTile(r, c); t.classList.add('tile-drop'); t.style.opacity = '1'; }, (3 - r) * 60 + (c * 30)); 
+    if (isSpinning) return;
+    isSpinning = true; 
+    combo = 0; 
+    winThisSpin = 0; 
+    updateUI();
+
+    // 判斷是否要進入結算流程
+    if (freeSpins === 0 && document.getElementById('mainBody').classList.contains('in-free')) {
+        await finalizeFreeGame(); 
+        return; // 重要：結算完後由 finalizeFreeGame 決定下一步，這裡直接 return
     }
-  }
-  await new Promise(r => setTimeout(r, 700));
-  checkMatches();
+
+    // 正常扣款或進入免費遊戲抽倍數
+    if (freeSpins > 0) {
+        freeSpins--; 
+        document.getElementById('mainBody').classList.add('in-free');
+        await runMultiplierDraw();
+    } else {
+        // 普通模式扣款
+        if(balance < betOptions[currentBetIdx]) { 
+            isSpinning = false; 
+            isAuto = false; 
+            updateUI();
+            alert("餘額不足"); 
+            return; 
+        }
+        balance -= betOptions[currentBetIdx]; 
+        roundsSinceFree++; 
+        currentMultiplier = 1; 
+        freeGameTotalWin = 0;
+        saveData();
+    }
+
+    if(!isMuted) document.getElementById('sndSpin').play();
+
+    // 跑盤面動畫
+    for (let r=0; r<4; r++) {
+        for (let c=0; c<4; c++) {
+            const t = document.getElementById(`tile-${r}-${c}`);
+            t.style.opacity = '0'; 
+            t.classList.remove('tile-drop', 'eliminating', 'gold-bg');
+            board[r][c] = getRandomTile(r, c); 
+            setTimeout(() => { 
+                drawTile(r, c); 
+                t.classList.add('tile-drop'); 
+                t.style.opacity = '1'; 
+            }, (3 - r) * 60 + (c * 30)); 
+        }
+    }
+    
+    await new Promise(r => setTimeout(r, 700));
+    checkMatches();
 }
 
 async function finalizeFreeGame() {
-    isSpinning = false;
+    // 結算畫面顯示
     const overlay = document.getElementById('settlementOverlay');
-    balance += freeGameTotalWin;
     document.getElementById('totalSettlementAmt').textContent = Math.floor(freeGameTotalWin).toLocaleString();
     overlay.style.display = 'flex';
     
-    // --- 上傳中獎紀錄至雲端排行榜 ---
+    // 加回餘額
+    balance += freeGameTotalWin;
+    
+    // 排行榜上傳邏輯
     if (freeGameTotalWin > 0) {
         try {
-            // 先取得目前第十名分數做門檻檢查，節省寫入額度
-            const rankItems = document.querySelectorAll('.rank-item');
-            let threshold = 0;
-            if (rankItems.length >= 10) {
-                const lastWinText = rankItems[rankItems.length - 1].querySelector('.rank-win').textContent;
-                threshold = parseFloat(lastWinText.replace(/[$,]/g, ''));
-            }
-
-            if (rankItems.length < 10 || freeGameTotalWin > threshold) {
-                await db.collection("mahjong_wins").add({
-                    name: localStorage.getItem('player_name') || '匿名大亨',
-                    win: freeGameTotalWin,
-                    time: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
+            await db.collection("mahjong_wins").add({
+                name: localStorage.getItem('player_name') || '匿名大亨',
+                win: freeGameTotalWin,
+                time: firebase.firestore.FieldValue.serverTimestamp()
+            });
         } catch (e) { console.warn("排行榜紀錄上傳失敗"); }
-        saveData();
     }
-    
+
     await new Promise(r => setTimeout(r, 3000));
     overlay.style.display = 'none';
+    
+    // 清除免費遊戲狀態
     document.getElementById('mainBody').classList.remove('in-free');
-    currentMultiplier = 1; freeGameTotalWin = 0; updateUI();
-    if (isAuto) setTimeout(startSpin, 1000);
+    currentMultiplier = 1; 
+    freeGameTotalWin = 0; 
+    isSpinning = false; // 在這裡才釋放鎖定
+    saveData();
+    updateUI();
+
+    // 如果是自動模式，重新開始
+    if (isAuto) setTimeout(startSpin, 500);
+}
+
+async function checkMatches() {
+    let toEliminate = new Set();
+    baseIcons.forEach(target => {
+        let matchedInCols = [];
+        for (let c = 0; c < 4; c++) {
+            let colMatches = [];
+            for (let r = 0; r < 4; r++) { 
+                if (board[r][c] === target || isWild(board[r][c])) colMatches.push({r, c}); 
+            }
+            if (colMatches.length > 0) matchedInCols.push(colMatches); else break;
+        }
+        if (matchedInCols.length >= 3) matchedInCols.forEach(col => col.forEach(pos => toEliminate.add(`${pos.r},${pos.c}`)));
+    });
+
+    if (toEliminate.size > 0) {
+        combo++; 
+        if(!isMuted) document.getElementById('sndMatch').play();
+        let win = toEliminate.size * (betOptions[currentBetIdx] / 50) * currentMultiplier;
+        
+        if (document.getElementById('mainBody').classList.contains('in-free')) {
+            freeGameTotalWin += win;
+        } else {
+            winThisSpin += win; 
+            balance += win;
+        }
+        updateUI();
+
+        // 消除動畫
+        toEliminate.forEach(pos => { document.getElementById(`tile-${pos.split(',')[0]}-${pos.split(',')[1]}`).classList.add('gold-bg'); });
+        await new Promise(r => setTimeout(r, 150));
+        toEliminate.forEach(pos => { document.getElementById(`tile-${pos.split(',')[0]}-${pos.split(',')[1]}`).classList.add('eliminating'); });
+        await new Promise(r => setTimeout(r, 300));
+        
+        toEliminate.forEach(pos => {
+            const [r, c] = pos.split(',').map(Number); 
+            const el = document.getElementById(`tile-${r}-${c}`);
+            el.classList.remove('eliminating', 'tile-drop', 'gold-bg'); 
+            board[r][c] = getRandomTile(r, c); 
+            drawTile(r, c); 
+            el.classList.add('tile-drop');
+        });
+        setTimeout(checkMatches, 500);
+    } else {
+        // 沒有更多匹配了
+        let huCount = 0; 
+        board.forEach(row => row.forEach(icon => { if(icon === '胡') huCount++; }));
+
+        if (huCount >= 3 && freeSpins === 0 && !document.getElementById('mainBody').classList.contains('in-free')) {
+            // 觸發免費遊戲
+            roundsSinceFree = 0; 
+            if(!isMuted && document.getElementById('sndBell')) document.getElementById('sndBell').play();
+            document.getElementById('huOverlay').style.display = 'block';
+            freeSpins = 10; 
+            isSpinning = false; // 暫時釋放，讓 startSpin 能被下一動觸發
+            updateUI();
+            saveData();
+            setTimeout(() => { 
+                document.getElementById('huOverlay').style.display = 'none'; 
+                startSpin(); // 自動開始第一轉
+            }, 1000);
+        } else {
+            // 免費遊戲進行中或普通模式結束
+            isSpinning = false; 
+            updateUI();
+            saveData();
+            
+            if (isAuto || (freeSpins > 0)) {
+                setTimeout(startSpin, 1000);
+            } else if (document.getElementById('mainBody').classList.contains('in-free') && freeSpins === 0) {
+                // 這是最後一轉結束，下一動會進入結算
+                setTimeout(startSpin, 500);
+            }
+        }
+    }
 }
 
 async function runMultiplierDraw() {
@@ -509,51 +612,6 @@ function drawTile(r, c) {
   el.innerHTML = icon === '元寶' ? '💰' : icon;
   if (isWild(icon) && icon !== '胡') {
     el.innerHTML += '<div style="position:absolute;top:0;right:0;background:gold;color:#000;font-size:8px;padding:1px 2px;border-radius:0 0 0 4px;">WILD</div>';
-  }
-}
-
-async function checkMatches() {
-  let toEliminate = new Set();
-  baseIcons.forEach(target => {
-    let matchedInCols = [];
-    for (let c = 0; c < 4; c++) {
-      let colMatches = [];
-      for (let r = 0; r < 4; r++) { if (board[r][c] === target || isWild(board[r][c])) colMatches.push({r, c}); }
-      if (colMatches.length > 0) matchedInCols.push(colMatches); else break;
-    }
-    if (matchedInCols.length >= 3) matchedInCols.forEach(col => col.forEach(pos => toEliminate.add(`${pos.r},${pos.c}`)));
-  });
-
-  if (toEliminate.size > 0) {
-    combo++; if(!isMuted) document.getElementById('sndMatch').play();
-    let win = toEliminate.size * (betOptions[currentBetIdx] / 50) * currentMultiplier;
-    if (freeSpins >= 0 && document.getElementById('mainBody').classList.contains('in-free')) freeGameTotalWin += win;
-    else { winThisSpin += win; balance += win; }
-    updateUI();
-    toEliminate.forEach(pos => { document.getElementById(`tile-${pos.split(',')[0]}-${pos.split(',')[1]}`).classList.add('gold-bg'); });
-    await new Promise(r => setTimeout(r, 150));
-    toEliminate.forEach(pos => { document.getElementById(`tile-${pos.split(',')[0]}-${pos.split(',')[1]}`).classList.add('eliminating'); });
-    await new Promise(r => setTimeout(r, 300));
-    toEliminate.forEach(pos => {
-      const [r, c] = pos.split(',').map(Number); const el = document.getElementById(`tile-${r}-${c}`);
-      el.classList.remove('eliminating', 'tile-drop', 'gold-bg'); void el.offsetWidth; 
-      board[r][c] = getRandomTile(r, c); drawTile(r, c); el.classList.add('tile-drop');
-    });
-    setTimeout(checkMatches, 500);
-  } else {
-    let huCount = 0; board.forEach(row => row.forEach(icon => { if(icon === '胡') huCount++; }));
-    if (huCount >= 3 && freeSpins === 0 && !document.getElementById('mainBody').classList.contains('in-free')) {
-      roundsSinceFree = 0; if(!isMuted && document.getElementById('sndBell')) document.getElementById('sndBell').play();
-      document.getElementById('huOverlay').style.display = 'block';
-      freeSpins = 10; updateUI();
-      saveData();
-      setTimeout(() => { document.getElementById('huOverlay').style.display = 'none'; if (isAuto) startSpin(); }, 1000);
-    } else {
-      isSpinning = false; updateUI();
-      if (isAuto) setTimeout(startSpin, 1000);
-      else if (freeSpins === 0 && document.getElementById('mainBody').classList.contains('in-free')) startSpin();
-      else saveData();
-    }
   }
 }
 
