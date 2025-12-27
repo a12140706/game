@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<title>連連大亨</title>
+<style>
+  :root { --gold: #ffd86b; --bg: #1a0505; --card: #2a0202; --mist: rgba(0,0,0,0.96); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  
+  body { 
+    margin: 0; padding: 0; background: var(--bg); color: #fff;
+    font-family: "Microsoft JhengHei", Arial; height: 100dvh; width: 100vw; overflow: hidden;
+    display: flex; 
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+
+  .topbar {
+    height: calc(45px + env(safe-area-inset-top)); background: linear-gradient(#4a0404, #2a0202);
+    display: flex; align-items: center; padding: env(safe-area-inset-top) 15px 0 15px; gap: 10px; border-bottom: 2px solid #5c0a0a;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+  }
+  .balance-box { background: rgba(0,0,0,0.5); border: 1px solid var(--gold); border-radius: 15px; padding: 4px 12px; color: var(--gold); font-weight: bold; font-size: 16px; }
+
+  .main-layout { flex: 1; display: flex; padding-top: calc(50px + env(safe-area-inset-top)); width: 100%; height: 100%; }
+
+  @keyframes shake {
+    0% { transform: translate(1px, 1px); }
+    50% { transform: translate(-2px, 2px); }
+    100% { transform: translate(1px, -1px); }
+  }
+  .shaking { animation: shake 0.1s infinite; }
+  .blinking .tile { animation: blink 4s infinite; }
+  @keyframes blink { 0%, 75% { opacity: 1; } 80%, 95% { opacity: 0.1; } 100% { opacity: 1; } }
+
+  .game-section { flex: 3; position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  
+  .game-grid { 
+    display: grid; 
+    grid-template-columns: repeat(8, 1fr); 
+    grid-template-rows: repeat(6, 1fr); 
+    gap: 4px; 
+    padding: 10px; 
+    width: 100%; 
+    height: calc(100dvh - 60px - env(safe-area-inset-bottom));
+    max-width: 95vw;
+    margin: 0 auto;
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mist-overlay {
+    position: absolute; width: 100%; height: 100%; pointer-events: none;
+    background: radial-gradient(circle 120px at var(--x) var(--y), transparent 10%, var(--mist) 100%);
+    z-index: 10; display: none; transition: opacity 0.5s, background 0.1s ease-out;
+  }
+
+  .tile {
+    background: var(--card); border: 1px solid #5c0a0a;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(12px, 8vh, 24px); 
+    position: relative; transition: 0.2s;
+    overflow: hidden;
+  }
+  .tile.selected { border-color: var(--gold); background: #4a0404; transform: scale(1.1); z-index: 20; box-shadow: 0 0 15px var(--gold); }
+  .tile.hidden { visibility: hidden; pointer-events: none; }
+  .tile.locked { background: #111; filter: grayscale(1); }
+  .tile.locked::after { content: '🔒'; position: absolute; font-size: 10px; top: 1px; right: 1px; }
+
+  .control-section {
+    flex: 1.2; background: #222; display: flex; flex-direction: column;
+    justify-content: flex-start; align-items: center; gap: 8px; padding: 10px;
+    overflow-y: auto; border-left: 1px solid #444;
+  }
+
+  .timer-display { font-size: 24px; font-weight: bold; color: #ff4757; }
+  .mode-switch {
+    width: 100%; background: #333; padding: 6px 10px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center; border: 1px solid #444;
+  }
+  .mode-switch label { font-size: 12px; font-weight: bold; color: #ccc; }
+
+  .btn-action {
+    width: 100%; padding: 12px; border-radius: 30px; border: 2px solid var(--gold);
+    background: linear-gradient(#ff4757, #b91c1c); color: #fff; font-weight: 900; font-size: 18px;
+    cursor: pointer;
+  }
+
+  .leaderboard { width: 100%; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 8px; border: 1px solid #555; }
+  .rank-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+
+  /* 結算畫面 Modal */
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 3000; display: none; align-items: center; justify-content: center; flex-direction: column; }
+  .modal-content { background:#1a1a1a; border:2px solid var(--gold); padding:30px; border-radius:20px; text-align:center; min-width: 280px; }
+
+  @media (orientation: portrait) { .portrait-tip { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #1a0505; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; } }
+  @media (orientation: landscape) { .portrait-tip { display: none; } }
+
+  .float-msg { position: absolute; font-weight: bold; animation: floatUp 0.8s forwards; z-index: 100; font-size: 18px; pointer-events: none; }
+  @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-60px); } }
+
+  .combo-text {
+    position: fixed; top: 40%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gold); font-size: 48px; font-weight: bold; font-style: italic;
+    text-shadow: 3px 3px 0px #000, 0 0 20px rgba(255,216,107,0.5);
+    pointer-events: none; z-index: 2000;
+    animation: comboPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+  @keyframes comboPop { 
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 
+    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -60%) scale(1); opacity: 0; }
+  }
+</style>
+</head>
+<body onmousemove="updateMist(event)" ontouchmove="updateMist(event)">
+
+<div class="portrait-tip">
+  <div style="font-size: 50px;">🔄</div>
+  <p>橫著玩</p>
+</div>
+
+<div class="topbar">
+  <div class="sound-btn" onclick="toggleMute()" id="muteBtn">🔊</div>
+  <div class="sound-btn" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
+  <div class="balance-box">💎 <span id="balanceText">0</span></div>
+  <button onclick="showRank()" style="padding:5px 10px; background:#f1c40f; border:none; border-radius:5px; font-weight:bold;">🏆 排行榜</button>
+
+<div id="rankOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:#222; width:85%; max-width:400px; border-radius:15px; border:2px solid #f1c40f; padding:20px;">
+        <h2 style="color:#f1c40f; text-align:center; margin-bottom:15px;">連連看排行榜</h2>
+        <div id="rankList" style="max-height:300px; overflow-y:auto; margin-bottom:15px;">
+            </div>
+        <button onclick="document.getElementById('rankOverlay').style.display='none'" style="width:100%; padding:10px; background:#444; color:#fff; border:none; border-radius:8px;">關閉</button>
+    </div>
+</div>
+  <marquee id="bonusInfo" style="flex:1; color:var(--gold); font-size: 12px;">龍會加秒數，牛跟虎錢比較多，豬會額外消一對</marquee>
+  <a href="index.html" style="text-decoration:none;">
+    <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px; font-weight:bold;">🏠 回大廳</button>
+  </a>
+</div>
+
+<div class="main-layout">
+  <div class="game-section" id="gameWrapper">
+    <div class="mist-overlay" id="mist"></div>
+    <div class="game-grid" id="gameGrid"></div>
+    <div id="combo-container"></div>
+  </div>
+
+  <div class="control-section">
+    <div class="timer-display">⏱ <span id="timeLeft">0</span>s</div>
+    
+    <div class="mode-switch"><label>🌑 迷霧 (+1.0倍)</label><input type="checkbox" id="mistToggle" onchange="updateBonusInfo()"></div>
+    <div class="mode-switch"><label>🔒 鎖頭 (+0.5倍)</label><input type="checkbox" id="lockToggle" onchange="updateBonusInfo()"></div>
+    <div class="mode-switch"><label>🌪️ 地震 (+0.8倍)</label><input type="checkbox" id="shakeToggle" onchange="updateBonusInfo()"></div>
+    <div class="mode-switch"><label>⏳ 閃爍 (+1.2倍)</label><input type="checkbox" id="blinkToggle" onchange="updateBonusInfo()"></div>
+
+    <button class="btn-action" id="startBtn" onclick="startGame()">新開一局 $500</button>
+    <button class="btn-action" style="background: #444; border-color: #777; font-size:14px; margin-top:5px;" onclick="shuffleGrid()">🔄 隨機洗牌</button>
+
+    <div class="leaderboard">
+        <div style="color:var(--gold); font-size:12px; text-align:center;">🏆 最高紀錄</div>
+        <div class="rank-item" style="color:#0f0"><span>單局</span><span id="highScoreText">$0</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="settle-screen" class="modal">
+  <div class="modal-content">
+      <h1 style="color:var(--gold); margin-bottom: 10px;">🎉 結束!</h1>
+      <p id="reward-text" style="color:#fff; line-height: 1.6; margin-bottom: 20px; text-align: left; padding: 0 20px; white-space: pre-wrap;"></p>
+      <button class="btn-action" onclick="closeSettle()" style="width:auto; padding:10px 40px;">確認</button>
+  </div>
+</div>
+
+<audio id="bgm1" src="background-music-434612.mp3" loop></audio>
+<audio id="bgm2" src="soft-background-music-427252.mp3" loop></audio>
+<audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop></audio>
+<audio id="sndNormal" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+<audio id="sndSpecial" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+<audio id="sndExplode" src="https://assets.mixkit.co/active_storage/sfx/1494/1494-preview.mp3"></audio>
+<audio id="sndShake" src="https://assets.mixkit.co/active_storage/sfx/1103/1103-preview.mp3"></audio>
+<audio id="sndWin" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" preload="auto"></audio>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+// --- Firebase 初始化 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  authDomain: "game-80d68.firebaseapp.com",
+  projectId: "game-80d68",
+  storageBucket: "game-80d68.firebasestorage.app",
+  messagingSenderId: "636332967920",
+  appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+  measurementId: "G-MJZ4PGEHSQ"
+};
+
+// 避免重複初始化
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+// --- 核心變數 ---
+let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+let highScore = parseFloat(localStorage.getItem('connect_high_score')) || 0;
+let currentGameProfit = 0, timeLeft = 0, timer = null, selected = null;
+let isMuted = false, currentBgmIdx = 1, isAudioUnlocked = false;
+const bgmList = [null, 'bgm1', 'bgm2', 'bgm3'];
+const ROWS = 6, COLS = 8;
+const icons = ['🐭', '🐰', '🐍', '🐴', '🐑', '🐒', '🐔', '🐶', '🐲', '🐷', '🐮', '🐯'];
+let boardData = [], currentMultiplier = 1.0;
+let tilesLeft = 0; 
+let comboCount = 0;
+let lastMatchTime = 0;
+const COMBO_TIMEOUT = 2000; 
+
+// 修改後的數據存取邏輯
+async function saveData(syncToCloud = false) {
+    // 1. 永遠先存本地 (保證體驗)
+    localStorage.setItem('sicbo_balance', balance);
+    localStorage.setItem('connect_high_score', highScore);
+
+    const playerId = localStorage.getItem('player_id');
+    if (!playerId || !db) return;
+
+    // 2. 如果是點擊「回大廳」，我們還是強制同步一次 Balance (錢很重要)
+    if (syncToCloud === true) {
+        try {
+            await db.collection("users").doc(playerId).update({ 
+                balance: balance,
+                link_score: highScore,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            return;
+        } catch (e) { console.warn("同步失敗"); }
+    }
+
+    // 3. 【新邏輯】遊戲結束時的自動判斷 (只有破紀錄且夠強才存雲端)
+    // 判斷當前分數是否高於原本的雲端最高分 (我們已經在結算時更新了 highScore 變數)
+    try {
+        // 抓取排行榜第 10 名的分數
+        const rankSnap = await db.collection("users")
+            .orderBy("link_score", "desc")
+            .limit(10)
+            .get();
+
+        let top10Threshold = 0;
+        if (rankSnap.size >= 10) {
+            top10Threshold = rankSnap.docs[rankSnap.docs.length - 1].data().link_score || 0;
+        }
+
+        // 條件：分數大於前十名門檻
+        if (highScore > top10Threshold) {
+            await db.collection("users").doc(playerId).update({ 
+                link_score: highScore,
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log("恭喜上榜！已同步雲端紀錄");
+        } else {
+            console.log("未達前十名門檻，僅存儲於本地");
+        }
+    } catch (e) {
+        console.error("排行榜門檻檢查失敗", e);
+    }
+}
+// --- 顯示排行榜 ---
+async function showRank() {
+    const overlay = document.getElementById('rankOverlay');
+    const list = document.getElementById('rankList');
+    
+    // 顯示讀取中
+    list.innerHTML = '<div style="text-align:center; color:#888;">載入中...</div>';
+    overlay.style.display = 'flex';
+
+    try {
+        // 從 users 集合中，依照 link_score 由大到小排序，取前 20 名
+        const snapshot = await db.collection("users")
+            .where("link_score", ">", 0) // 只抓有分數的人
+            .orderBy("link_score", "desc")
+            .limit(20)
+            .get();
+
+        list.innerHTML = '';
+        if (snapshot.empty) {
+            list.innerHTML = '<div style="text-align:center; color:#888;">暫無紀錄</div>';
+            return;
+        }
+
+        let rank = 1;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const row = document.createElement('div');
+            row.style = "display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333;";
+            
+            // 前三名給不同顏色
+            let rankColor = "#fff";
+            if (rank === 1) rankColor = "#ffd700"; // 金
+            else if (rank === 2) rankColor = "#c0c0c0"; // 銀
+            else if (rank === 3) rankColor = "#cd7f32"; // 銅
+
+            row.innerHTML = `
+                <span style="color:${rankColor}">No.${rank} ${data.player_name || '玩家'}</span>
+                <span style="color:#f1c40f; font-weight:bold;">$${Math.floor(data.link_score).toLocaleString()}</span>
+            `;
+            list.appendChild(row);
+            rank++;
+        });
+    } catch (error) {
+        console.error("讀取排行榜失敗:", error);
+        list.innerHTML = '<div style="text-align:center; color:#ff4757;">讀取失敗</div>';
+    }
+}
+// --- 初始化 (取兩者之最) ---
+window.onload = async () => {
+    // 1. 先讀取本地
+    const localBal = localStorage.getItem('sicbo_balance');
+    if (localBal !== null) balance = parseFloat(localBal);
+    
+    const localHigh = localStorage.getItem('connect_high_score');
+    if (localHigh !== null) highScore = parseFloat(localHigh);
+
+    // 2. 抓雲端比對
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && db) {
+        try {
+            const doc = await db.collection("users").doc(playerId).get();
+            if (doc.exists) {
+                const data = doc.data();
+                const cloudBal = data.balance;
+                const cloudHigh = data.highScore;
+
+                // 餘額比對
+                if (cloudBal !== undefined && cloudBal > balance) {
+                    balance = cloudBal;
+                } else if (cloudBal !== undefined && balance > cloudBal) {
+                    saveData(true); 
+                }
+
+                // 最高分比對
+                if (cloudHigh !== undefined && cloudHigh > highScore) {
+                    highScore = cloudHigh;
+                }
+            }
+        } catch (e) { console.log("離線模式"); }
+    }
+    
+    // 3. 攔截回首頁連結
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            const href = link.getAttribute('href');
+            if (href && href !== '#' && !href.startsWith('javascript')) {
+                e.preventDefault();
+                await saveData(true); // 離開時強制同步一次
+                window.location.href = href;
+            }
+        });
+    });
+
+    updateUI();
+};
+
+// 處理網頁滑掉
+window.addEventListener('pagehide', () => {
+    localStorage.setItem('sicbo_balance', balance);
+});
+
+// --- 遊戲邏輯與 UI 更新 ---
+
+function updateUI() {
+    document.getElementById('balanceText').textContent = Math.floor(balance).toLocaleString();
+    document.getElementById('highScoreText').textContent = '$' + Math.floor(highScore).toLocaleString();
+}
+
+function updateBonusInfo() {
+    let mult = 1.0;
+    if (document.getElementById('mistToggle').checked) mult += 1.0;
+    if (document.getElementById('lockToggle').checked) mult += 0.5;
+    if (document.getElementById('shakeToggle').checked) mult += 0.8;
+    if (document.getElementById('blinkToggle').checked) mult += 1.2;
+    currentMultiplier = mult;
+    document.getElementById('bonusInfo').textContent = `倍率：${mult.toFixed(1)}x`;
+}
+
+function moveMistTo(x, y) {
+    if (!document.getElementById('mistToggle').checked) return;
+    const mist = document.getElementById('mist');
+    mist.style.setProperty('--x', x + 'px');
+    mist.style.setProperty('--y', y + 'px');
+}
+
+function updateMist(e) {
+    const rect = document.getElementById('gameWrapper').getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+    const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : null);
+    if (clientX !== null && clientY !== null) {
+        moveMistTo(clientX - rect.left, clientY - rect.top);
+    }
+}
+
+function startGame() {
+    if (balance < 500) { alert("餘額不足！"); return; }
+    
+    clearInterval(timer);
+    selected = null;
+    balance -= 500; 
+    currentGameProfit = 0; 
+    tilesLeft = ROWS * COLS;
+    comboCount = 0; 
+    updateUI(); 
+    saveData(); // 下注後存本地
+    updateBonusInfo();
+    
+    timeLeft = 60; 
+    document.getElementById('timeLeft').textContent = timeLeft;
+    document.getElementById('startBtn').disabled = true;
+    
+    document.getElementById('mist').style.display = document.getElementById('mistToggle').checked ? 'block' : 'none';
+    if (document.getElementById('blinkToggle').checked) document.getElementById('gameGrid').classList.add('blinking');
+    else document.getElementById('gameGrid').classList.remove('blinking');
+
+    createBoard();
+    timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timeLeft').textContent = timeLeft;
+        if (document.getElementById('shakeToggle').checked && timeLeft > 0 && timeLeft % 10 === 0) triggerShake();
+        if (timeLeft <= 0) endGame();
+    }, 1000);
+    if (!isAudioUnlocked) unlockAudio();
+}
+
+function endGame() {
+    clearInterval(timer);
+    playSound('sndWin');
+
+    let isNewRecord = false;
+    if (currentGameProfit > highScore) {
+        highScore = currentGameProfit;
+        isNewRecord = true;
+    }
+    
+    let msg = `本局得分：${Math.floor(currentGameProfit)}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
+    msg += `最高紀錄：${Math.floor(highScore)}\n`;
+    msg += `-------------------\n`;
+    msg += `當前倍率：x${currentMultiplier.toFixed(1)}\n`;
+    msg += `結算獲得：+${Math.floor(currentGameProfit)} 💎`;
+
+    document.getElementById('reward-text').innerText = msg;
+    document.getElementById('settle-screen').style.display = 'flex';
+    
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('mist').style.display = 'none';
+    document.getElementById('gameGrid').classList.remove('blinking');
+    
+    updateUI();
+    saveData(); // 結算後存本地，不強制上傳雲端(等回首頁才傳)
+}
+
+function closeSettle() {
+    document.getElementById('settle-screen').style.display = 'none';
+}
+
+function createBoard() {
+    const grid = document.getElementById('gameGrid');
+    grid.innerHTML = ''; boardData = [];
+    const hasLock = document.getElementById('lockToggle').checked;
+    let temp = [];
+    for (let i = 0; i < (ROWS * COLS) / 2; i++) {
+        let icon = icons[Math.floor(Math.random() * icons.length)];
+        temp.push(icon, icon);
+    }
+    temp.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < ROWS * COLS; i++) {
+        const isLocked = hasLock ? (Math.random() < 0.25) : false;
+        const tile = { id: i, icon: temp[i], isLocked: isLocked, isHidden: false };
+        boardData.push(tile);
+        const div = document.createElement('div');
+        div.className = 'tile' + (tile.isLocked ? ' locked' : '');
+        div.id = `tile-${i}`;
+        div.innerHTML = tile.icon;
+        div.onclick = (e) => {
+            const rect = div.getBoundingClientRect();
+            const wrapperRect = document.getElementById('gameWrapper').getBoundingClientRect();
+            moveMistTo(rect.left + rect.width/2 - wrapperRect.left, rect.top + rect.height/2 - wrapperRect.top);
+            handleTileClick(i, div);
+        };
+        grid.appendChild(div);
+    }
+}
+
+function handleTileClick(idx, el) {
+    if (timeLeft <= 0 || boardData[idx].isHidden || boardData[idx].isLocked) return;
+    if (!selected) {
+        selected = { idx, el }; el.classList.add('selected');
+    } else {
+        if (selected.idx === idx) {
+            el.classList.remove('selected'); selected = null;
+        } else if (boardData[selected.idx].icon === boardData[idx].icon) {
+            eliminate(selected.idx, idx);
+        } else {
+            selected.el.classList.remove('selected'); el.classList.add('selected'); selected = { idx, el };
+        }
+    }
+}
+
+function eliminate(i1, i2) {
+    const icon = boardData[i1].icon;
+    boardData[i1].isHidden = true; boardData[i2].isHidden = true;
+    document.getElementById(`tile-${i1}`).classList.add('hidden');
+    document.getElementById(`tile-${i2}`).classList.add('hidden');
+    
+    tilesLeft -= 2; 
+
+    const now = Date.now();
+    if (now - lastMatchTime < COMBO_TIMEOUT) {
+        comboCount++;
+    } else {
+        comboCount = 1;
+    }
+    lastMatchTime = now;
+
+    if (comboCount > 1) showComboUI(comboCount);
+
+    const mist = document.getElementById('mist');
+    mist.style.opacity = "0.3"; 
+    setTimeout(() => { mist.style.opacity = "1"; }, 1500);
+
+    let baseBonus = 20;
+    let special = false;
+    if (icon === '🐲') { timeLeft += 7; showFloat("神龍續命 +7s", "#ff4757"); special = true; }
+    else if (icon === '🐮') { baseBonus = 300; special = true; }
+    else if (icon === '🐯') { baseBonus = 150; special = true; }
+    else if (icon === '🐷') { playSound('sndExplode'); autoExplode(); baseBonus = 50; special = true; }
+    
+    if (special) playSound('sndSpecial'); else playSound('sndNormal');
+
+    let comboMult = 1 + (comboCount - 1) * 0.1;
+    let finalBonus = Math.floor(baseBonus * currentMultiplier * comboMult);
+    
+    balance += finalBonus; currentGameProfit += finalBonus;
+    updateUI();
+    saveData(); // 中獎後存本地
+    showFloat(`+$${finalBonus}`, "#ffd86b");
+    
+    [i1, i2].forEach(idx => {
+        const neighbors = [idx-1, idx+1, idx-COLS, idx+COLS];
+        neighbors.forEach(n => {
+            if (boardData[n] && boardData[n].isLocked) {
+                boardData[n].isLocked = false;
+                document.getElementById(`tile-${n}`).classList.remove('locked');
+            }
+        });
+    });
+    
+    if(selected) selected.el.classList.remove('selected');
+    selected = null;
+
+    if (tilesLeft <= 0) {
+        setTimeout(endGame, 500);
+    }
+}
+
+function showComboUI(count) {
+    const container = document.getElementById('combo-container');
+    container.innerHTML = "";
+    const div = document.createElement('div');
+    div.className = 'combo-text';
+    div.innerText = `${count} COMBO!`;
+    container.appendChild(div);
+    setTimeout(() => { if(div) div.remove(); }, 800);
+}
+
+function autoExplode() {
+    let available = boardData.filter(b => !b.isHidden);
+    if (available.length < 2) return;
+    
+    let pair = null;
+    for(let i=0; i<available.length; i++) {
+        for(let j=i+1; j<available.length; j++) {
+            if(available[i].icon === available[j].icon) {
+                pair = [available[i].id, available[j].id];
+                break;
+            }
+        }
+        if(pair) break;
+    }
+    
+    if(pair) {
+        setTimeout(() => {
+            showFloat("小豬衝撞！", "#ff9ff3");
+            eliminate(pair[0], pair[1]);
+        }, 300);
+    }
+}
+
+function triggerShake() {
+    const grid = document.getElementById('gameGrid');
+    grid.classList.add('shaking'); playSound('sndShake'); showFloat("🌪️ 地震拉！", "#ff9f43");
+    setTimeout(() => {
+        grid.classList.remove('shaking');
+        shuffleRemaining();
+    }, 1000);
+}
+
+function shuffleRemaining() {
+    let remaining = boardData.filter(b => !b.isHidden);
+    let tempIcons = remaining.map(b => b.icon);
+    tempIcons.sort(() => Math.random() - 0.5);
+    let idx = 0;
+    boardData.forEach(b => {
+        if (!b.isHidden) {
+            b.icon = tempIcons[idx++];
+            document.getElementById(`tile-${b.id}`).innerHTML = b.icon;
+        }
+    });
+}
+
+function shuffleGrid() { if (timeLeft > 0) shuffleRemaining(); }
+
+function playSound(id) { if (!isMuted) { const s = document.getElementById(id); if (s) { s.currentTime = 0; s.play().catch(()=>{}); } } }
+
+function showFloat(txt, color) {
+    const f = document.createElement('div');
+    f.className = 'float-msg'; f.style.color = color;
+    f.style.left = '50%'; f.style.top = '40%'; f.innerText = txt;
+    document.getElementById('gameWrapper').appendChild(f);
+    setTimeout(() => f.remove(), 800);
+}
+
+function cycleBGM() {
+    if (!isAudioUnlocked) { unlockAudio(); return; }
+    stopAllBGM();
+    currentBgmIdx = (currentBgmIdx + 1) % 4;
+    document.getElementById('bgmBtn').textContent = currentBgmIdx === 0 ? '🎵 音樂：關' : '🎵 音樂 ' + currentBgmIdx;
+    if (!isMuted) playBGM();
+}
+
+function stopAllBGM() { bgmList.forEach(id => { if (id) { const a = document.getElementById(id); a.pause(); a.currentTime = 0; } }); }
+
+function playBGM() { if (currentBgmIdx !== 0 && !isMuted) { const bgm = document.getElementById(bgmList[currentBgmIdx]); if (bgm) { bgm.volume = 0.2; bgm.play().catch(()=>{}); } } }
+
+function toggleMute() { isMuted = !isMuted; document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊'; if (isMuted) stopAllBGM(); else playBGM(); }
+
+function unlockAudio() { const audios = document.querySelectorAll('audio'); audios.forEach(a => { a.muted = true; a.play().then(()=>{a.pause(); a.muted=false;}); }); isAudioUnlocked = true; }
+</script>
+</body>
+</html>
