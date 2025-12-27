@@ -341,8 +341,22 @@
     <audio id="bgm1" src="background-music-434612.mp3" loop preload="auto"></audio>
     <audio id="bgm2" src="soft-background-music-427252.mp3" loop preload="auto"></audio>
     <audio id="bgm3" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" loop preload="auto"></audio>
+    <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
 
     <script>
+        // --- Firebase 初始化 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+            authDomain: "game-80d68.firebaseapp.com",
+            projectId: "game-80d68",
+            storageBucket: "game-80d68.firebasestorage.app",
+            messagingSenderId: "636332967920",
+            appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+            measurementId: "G-MJZ4PGEHSQ"
+        };
+
+
         const ROWS = 6, COLS = 10;
         const DESSERTS = ['🍓', '🍎', '🍰', '🍇', '🍬', '🍭', '🍩', '🍮', '🍯', '🍪', '🧁', '🍒'];
         let boardData = [], firstSelect = null, score = 0, tilesLeft = 0;
