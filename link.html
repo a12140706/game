@@ -219,51 +219,53 @@ const COMBO_TIMEOUT = 2000;
 
 // 修改後的數據存取邏輯
 async function saveData(syncToCloud = false) {
-    // 1. 永遠先存本地 (保證體驗)
+    // 1. 永遠先存本地 (修正鍵名為 link_high_score 以保持一致)
     localStorage.setItem('sicbo_balance', balance);
-    localStorage.setItem('connect_high_score', highScore);
+    localStorage.setItem('connect_high_score', highScore); // 確保這裡的名稱與你遊戲讀取時一致
 
     const playerId = localStorage.getItem('player_id');
     if (!playerId || !db) return;
 
-    // 2. 如果是點擊「回大廳」，我們還是強制同步一次 Balance (錢很重要)
+    // 2. 如果是點擊「回大廳」，強制同步 Balance 與 Score
     if (syncToCloud === true) {
         try {
             await db.collection("users").doc(playerId).update({ 
                 balance: balance,
-                link_score: highScore,
+                connect_high_score: highScore, // 此時的 highScore 已經是含倍率的分數
                 lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
             });
+            console.log("返回大廳：餘額與紀錄已完整同步");
             return;
-        } catch (e) { console.warn("同步失敗"); }
+        } catch (e) { console.warn("同步失敗", e); }
     }
 
-    // 3. 【新邏輯】遊戲結束時的自動判斷 (只有破紀錄且夠強才存雲端)
-    // 判斷當前分數是否高於原本的雲端最高分 (我們已經在結算時更新了 highScore 變數)
+    // 3. 遊戲結束時自動判斷 (只有破紀錄且夠強才存雲端)
     try {
-        // 抓取排行榜第 10 名的分數
         const rankSnap = await db.collection("users")
-            .orderBy("link_score", "desc")
+            .orderBy("connect_high_score", "desc")
             .limit(10)
             .get();
 
         let top10Threshold = 0;
         if (rankSnap.size >= 10) {
-            top10Threshold = rankSnap.docs[rankSnap.docs.length - 1].data().link_score || 0;
+            top10Threshold = rankSnap.docs[rankSnap.docs.length - 1].data().connect_high_score || 0;
         }
 
-        // 條件：分數大於前十名門檻
-        if (highScore > top10Threshold) {
+        // 如果目前分數超過前十名門檻，就更新雲端排行榜
+        if (highScore > top10Threshold || rankSnap.size < 10) {
             await db.collection("users").doc(playerId).update({ 
-                link_score: highScore,
+                connect_high_score: highScore,
+                balance: balance, // 既然都要連雲端了，順便把錢也更新
                 lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
             });
             console.log("恭喜上榜！已同步雲端紀錄");
         } else {
-            console.log("未達前十名門檻，僅存儲於本地");
+            // 平時沒破十強，只單獨更新錢，確保財產不丟失
+            await db.collection("users").doc(playerId).update({ balance: balance });
+            console.log("未達前十名門檻，僅同步餘額");
         }
     } catch (e) {
-        console.error("排行榜門檻檢查失敗", e);
+        console.error("排行榜檢查失敗", e);
     }
 }
 // --- 顯示排行榜 ---
@@ -278,8 +280,8 @@ async function showRank() {
     try {
         // 從 users 集合中，依照 link_score 由大到小排序，取前 20 名
         const snapshot = await db.collection("users")
-            .where("link_score", ">", 0) // 只抓有分數的人
-            .orderBy("link_score", "desc")
+            .where("connect_high_score", ">", 0) // 只抓有分數的人
+            .orderBy("connect_high_score", "desc")
             .limit(20)
             .get();
 
@@ -303,7 +305,7 @@ async function showRank() {
 
             row.innerHTML = `
                 <span style="color:${rankColor}">No.${rank} ${data.player_name || '玩家'}</span>
-                <span style="color:#f1c40f; font-weight:bold;">$${Math.floor(data.link_score).toLocaleString()}</span>
+                <span style="color:#f1c40f; font-weight:bold;">$${Math.floor(data.connect_high_score).toLocaleString()}</span>
             `;
             list.appendChild(row);
             rank++;
@@ -330,7 +332,7 @@ window.onload = async () => {
             if (doc.exists) {
                 const data = doc.data();
                 const cloudBal = data.balance;
-                const cloudHigh = data.highScore;
+                const cloudHigh = data.connect_high_score;
 
                 // 餘額比對
                 if (cloudBal !== undefined && cloudBal > balance) {
@@ -435,17 +437,34 @@ function endGame() {
     clearInterval(timer);
     playSound('sndWin');
 
+    // 1. 計算含倍率的最終分數
+    // 如果您的 currentGameProfit 已經是乘過倍率後的結果，則直接使用；
+    // 如果不是，則在這邊計算：let finalScore = currentGameProfit * currentMultiplier;
+    // 這裡假設我們要將「當前收益」與「倍率」結合後作為排行榜分數
+    const finalScore = Math.floor(currentGameProfit * currentMultiplier);
+
     let isNewRecord = false;
-    if (currentGameProfit > highScore) {
-        highScore = currentGameProfit;
+    // 判斷是否突破含倍率的最高紀錄
+    if (finalScore > highScore) {
+        highScore = finalScore;
         isNewRecord = true;
     }
     
-    let msg = `本局得分：${Math.floor(currentGameProfit)}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
+    // 2. 鑽石獎勵（餘額）
+    // 根據您上一封郵件的需求，餘額通常與分數掛鉤，
+    // 若要維持 1:1 則使用 finalScore；若要像連連看一樣 *15，則在此處修改
+    const finalReward = finalScore * 10; 
+
+    // 這裡需要更新餘額變數並存檔 (假設變數名為 balance)
+    if (typeof balance !== 'undefined') {
+        balance += finalReward;
+    }
+
+    let msg = `本局得分：${finalScore}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
     msg += `最高紀錄：${Math.floor(highScore)}\n`;
     msg += `-------------------\n`;
     msg += `當前倍率：x${currentMultiplier.toFixed(1)}\n`;
-    msg += `結算獲得：+${Math.floor(currentGameProfit)} 💎`;
+    msg += `結算獲得：+${finalReward} 💎`;
 
     document.getElementById('reward-text').innerText = msg;
     document.getElementById('settle-screen').style.display = 'flex';
@@ -455,7 +474,7 @@ function endGame() {
     document.getElementById('gameGrid').classList.remove('blinking');
     
     updateUI();
-    saveData(); // 結算後存本地，不強制上傳雲端(等回首頁才傳)
+    saveData(); // 這裡會儲存更新後的 balance 與 highScore 到 localStorage
 }
 
 function closeSettle() {
