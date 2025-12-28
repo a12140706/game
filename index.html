@@ -28,7 +28,71 @@
     overflow: hidden; 
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
+/* 通用項目樣式 */
+.rank-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.2s;
+}
 
+/* --- 第一名：呼吸燈 + 金屬流光特效 --- */
+.rank-top1 {
+  background: linear-gradient(110deg, #2a2200 20%, #6b5500 50%, #2a2200 80%);
+  background-size: 200% auto;
+  border: 1px solid #ffd700 !important;
+  animation: 
+    shine-gold 3s linear infinite, 
+    breathing-glow 2s ease-in-out infinite; /* 呼吸燈關鍵 */
+  transform: scale(1.02); /* 稍微放大顯示尊榮感 */
+}
+
+.rank-top1 .rank-name {
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+
+.rank-top1 .rank-num {
+  font-size: 1.4rem;
+}
+.buy-btn { background: #3b82f6; border:none; color:white; padding:5px 15px; border-radius:5px; font-weight:bold; }
+.equip-btn { background: #10b981; border:none; color:white; padding:5px 15px; border-radius:5px; font-weight:bold; cursor:pointer; }
+/* 呼吸燈動畫：陰影與亮度的強弱變化 */
+@keyframes breathing-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+    filter: brightness(1.3); /* 變亮 */
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+    filter: brightness(1);
+  }
+}
+
+/* 金屬光澤流動動畫 */
+@keyframes shine-gold {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* 第二、三名簡單漸層邊框 */
+.rank-top2 { border-left: 4px solid #c0c0c0; background: rgba(192, 192, 192, 0.1); }
+.rank-top3 { border-left: 4px solid #cd7f32; background: rgba(205, 127, 50, 0.1); }
+
+.rank-info { display: flex; align-items: center; gap: 10px; }
+.rank-num { min-width: 25px; text-align: center; font-weight: bold; }
+.rank-bal { color: #f1c40f; font-weight: bold; }
   .header {
     height: 50px; flex-shrink: 0;
     background: linear-gradient(to bottom, #5c0a0a, #2a0202);
@@ -108,6 +172,7 @@
 
 <div class="header">
   <div class="logo">阿記三缺一</div>
+  <div style="color:var(--gold); font-size:13px; cursor:pointer; text-decoration:underline;" onclick="openShop()">🏪商城</div>
   <div class="balance-display" onclick="toggleRank()">💎 <span id="mainBalance">0</span></div>
 </div>
 <div>
@@ -205,6 +270,21 @@
     <button class="modal-btn" style="background:#444; color:#ccc;" onclick="closeModal()">算了</button>
   </div>
 </div>
+<div id="shopModal" class="modal">
+  <div class="modal-content" style="max-width: 380px; padding: 15px;">
+    <h2 style="color:var(--gold); margin-bottom:10px;">遊戲商城</h2>
+    
+    <div style="display:flex; gap:5px; margin-bottom:15px;">
+      <button class="modal-btn" id="tabTitle" style="margin:0; background:var(--red);" onclick="switchShop('title')">稱號</button>
+      <button class="modal-btn" id="tabEffect" style="margin:0; background:#444;" onclick="switchShop('effect')">排行榜特效</button>
+    </div>
+
+    <div id="shopList" style="max-height: 300px; overflow-y: auto;">
+      </div>
+    
+    <button class="modal-btn" style="background:#222; margin-top:10px; border:1px solid #444;" onclick="closeShop()">離開商城</button>
+  </div>
+</div>
 
 <div id="nameModal" class="modal">
   <div class="modal-content">
@@ -257,7 +337,112 @@ const db = firebase.firestore();
     alert("阿記幫你刷了 " + amt.toLocaleString());
     closeModal();
   }
+// 商品定義
+  const SHOP_DATA = {
+    title: [
+      { id: 't_god', name: '🎲 賭神', price: 1000000 },
+      { id: 't_king', name: '👑 梟雄', price: 500000 },
+      { id: 't_rich', name: '💰 土豪', price: 100000 }
+    ],
+    effect: [
+      { id: 'e_gold', name: '✨ 黃金呼吸', price: 20000000, class: 'fx-gold' },
+      { id: 'e_fire', name: '🔥 地獄火', price: 8000000, class: 'fx-fire' },
+      { id: 'e_neon', name: '🌈 霓虹極光', price: 30000000, class: 'fx-neon' }
+    ]
+  };
 
+  let currentShopTab = 'title';
+
+  function switchShop(tab) {
+    currentShopTab = tab;
+    document.getElementById('tabTitle').style.background = tab === 'title' ? 'var(--red)' : '#444';
+    document.getElementById('tabEffect').style.background = tab === 'effect' ? 'var(--red)' : '#444';
+    renderShop();
+  }
+
+  function renderShop() {
+    const shopList = document.getElementById('shopList');
+    const myItems = JSON.parse(localStorage.getItem('my_assets') || '{}');
+    const currentEquipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
+    const now = Date.now();
+
+    let html = '';
+    SHOP_DATA[currentShopTab].forEach(item => {
+      const expiry = myItems[item.id] || 0;
+      const isOwned = now < expiry;
+      const isEquipped = (currentShopTab === 'title' ? currentEquipped.title : currentEquipped.effect) === item.id;
+
+      html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #444; padding:12px; margin-bottom:8px; border-radius:10px; background:rgba(0,0,0,0.3);">
+          <div style="text-align:left;">
+            <div style="color:var(--gold); font-weight:bold;">${item.name}</div>
+            <div style="color:#aaa; font-size:11px;">${isOwned ? '剩餘: ' + Math.ceil((expiry-now)/(1000*60*60*24)) + '天' : '價格: 💎 ' + item.price.toLocaleString()}</div>
+          </div>
+          <div>
+            ${isOwned ? 
+              `<button class="equip-btn" onclick="equipAsset('${currentShopTab}', '${item.id}')">${isEquipped ? '使用中' : '裝備'}</button>` : 
+              `<button class="buy-btn" onclick="buyAsset('${currentShopTab}', '${item.id}', ${item.price})">購買</button>`
+            }
+          </div>
+        </div>
+      `;
+    });
+    shopList.innerHTML = html;
+  }
+
+  // 購買與裝備邏輯
+  async function buyAsset(type, id, price) {
+    let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
+    if (balance < price) return alert("錢不夠！不借錢喔！");
+    if (!confirm("確定購買 7 天使用權嗎？")) return;
+
+    balance -= price;
+    const expiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
+    
+    // 更新本地
+    let myAssets = JSON.parse(localStorage.getItem('my_assets') || '{}');
+    myAssets[id] = expiry;
+    localStorage.setItem('my_assets', JSON.stringify(myAssets));
+    localStorage.setItem('sicbo_balance', balance);
+
+    // 同步 Firebase
+    const playerId = localStorage.getItem('player_id');
+    if (playerId) {
+      await db.collection("users").doc(playerId).update({ 
+        balance: balance,
+        assets: myAssets 
+      });
+    }
+
+    updateMainBalance();
+    renderShop();
+    alert("購買成功！");
+  }
+
+  async function equipAsset(type, id) {
+    let equipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
+    equipped[type] = id;
+    localStorage.setItem('equipped_assets', JSON.stringify(equipped));
+
+    // 同步到排行榜與顯示
+    const playerId = localStorage.getItem('player_id');
+    if (playerId) {
+      // 這裡我們把稱號與特效的 class 存入 Firebase
+      const titleObj = SHOP_DATA.title.find(t => t.id === equipped.title);
+      const effectObj = SHOP_DATA.effect.find(e => e.id === equipped.effect);
+      
+      const updateData = {
+        equipped_title: titleObj ? titleObj.name : "",
+        equipped_fx: effectObj ? effectObj.class : ""
+      };
+      
+      await db.collection("users").doc(playerId).update(updateData);
+    }
+
+    renderShop();
+    loadRanking();
+    alert("裝備成功！");
+  }
   // 排行榜顯示切換
   async function toggleRank() {
     const sidebar = document.getElementById('rankSidebar');
@@ -274,57 +459,45 @@ const db = firebase.firestore();
   }
 
   // 從 Firebase 抓取前 10 名
- async function loadRanking() {
-    const rankList = document.getElementById('rankList');
-    try {
-      const snapshot = await db.collection("users").orderBy("balance", "desc").limit(10).get();
-      let html = '';
-      let i = 1;
+async function loadRanking() {
+  const rankList = document.getElementById('rankList');
+  try {
+    const snapshot = await db.collection("users").orderBy("balance", "desc").limit(10).get();
+    let html = '';
+    let i = 1;
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        
-        // --- 樣式邏輯 ---
-        let rankClass = "";
-        let medal = "";
-        let specialStyle = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      let specialClass = "";
+      let medal = i;
 
-        if (i === 1) {
-          rankClass = "rank-top1"; // 第一名專用 Class
-          medal = "🏆";
-          // 第一名的外框發光與文字漸層
-          specialStyle = "background: linear-gradient(90deg, rgba(255,215,0,0.2) 0%, rgba(255,215,0,0) 100%); border: 1px solid #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.5);";
-        } else if (i === 2) {
-          rankClass = "rank-top2";
-          medal = "🥈";
-          specialStyle = "border-left: 4px solid #c0c0c0;";
-        } else if (i === 3) {
-          rankClass = "rank-top3";
-          medal = "🥉";
-          specialStyle = "border-left: 4px solid #cd7f32;";
-        }
+      if (i === 1) {
+        specialClass = "rank-top1";
+        medal = "🏆";
+      } else if (i === 2) {
+        specialClass = "rank-top2";
+        medal = "🥈";
+      } else if (i === 3) {
+        specialClass = "rank-top3";
+        medal = "🥉";
+      }
 
-        html += `
-          <div class="rank-item ${rankClass}" style="${specialStyle} margin-bottom: 8px; border-radius: 8px; transition: all 0.3s;">
-            <div style="display:flex; align-items:center;">
-              <span class="rank-num" style="width:30px; font-weight:bold; color:${i <= 3 ? '#fff' : '#888'}">${medal || i}</span>
-              <span class="rank-name" style="color:${i === 1 ? '#ffd700' : '#fff'}; font-size:${i === 1 ? '1.1rem' : '1rem'}; font-weight:${i <= 3 ? 'bold' : 'normal'}">
-                ${data.name || '無名氏'}
-              </span>
-            </div>
-            <span class="rank-bal" style="color:#f1c40f; font-family: monospace; font-weight:bold;">
-              💎${Math.floor(data.balance).toLocaleString()}
-            </span>
+      html += `
+        <div class="rank-item ${specialClass}">
+          <div class="rank-info">
+            <span class="rank-num">${medal}</span>
+            <span class="rank-name">${data.name || '無名氏'}</span>
           </div>
-        `;
-        i++;
-      });
-      rankList.innerHTML = html || '<p style="text-align:center; color:#888;">尚無排名數據</p>';
-    } catch (e) {
-      console.error(e);
-      rankList.innerHTML = '<p style="text-align:center; color:red;">載入失敗</p>';
-    }
+          <span class="rank-bal">💎${Math.floor(data.balance).toLocaleString()}</span>
+        </div>
+      `;
+      i++;
+    });
+    rankList.innerHTML = html || '<p style="text-align:center; color:#888;">尚無排名數據</p>';
+  } catch (e) {
+    rankList.innerHTML = '<p style="text-align:center; color:red;">載入失敗</p>';
   }
+}
 
   async function checkUserStatus() {
     let playerId = localStorage.getItem('player_id');
@@ -370,7 +543,48 @@ const db = firebase.firestore();
       updateMainBalance();
     }
   }
+// --- 商城功能 ---
+  function openShop() { document.getElementById('shopModal').style.display = 'flex'; }
+  function closeShop() { document.getElementById('shopModal').style.display = 'none'; }
 
+  async function buyTitle(titleName, price) {
+    let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
+    
+    if (balance < price) {
+      alert("阿記說：你錢不夠啦，再去贏一點！");
+      return;
+    }
+
+    if (!confirm(`確定要花費 💎 ${price.toLocaleString()} 購買「${titleName}」嗎？`)) return;
+
+    // 扣錢
+    balance -= price;
+    localStorage.setItem('sicbo_balance', balance);
+    
+    // 更新雲端名字 (加上稱號)
+    const playerId = localStorage.getItem('player_id');
+    const baseName = localStorage.getItem('player_name') || '無名氏';
+    const newFullName = `${titleName} ${baseName}`;
+
+    if (playerId) {
+      try {
+        await db.collection("users").doc(playerId).update({ 
+          balance: balance,
+          name: newFullName // 更新含有稱號的名字
+        });
+        localStorage.setItem('player_name', newFullName); // 本地同步更新
+        alert("購買成功！稱號已套用至排行榜。");
+      } catch (e) {
+        console.error("商城更新失敗", e);
+        alert("雲端同步失敗，但餘額已扣除(本地)");
+      }
+    }
+
+    updateMainBalance();
+    document.getElementById('welcomeUser').textContent = `歡迎回來，${newFullName}`;
+    closeShop();
+    loadRanking(); // 重新整理排行榜看到新稱號
+  }
   // --- 關鍵修復：儲存暱稱 ---
   async function saveNewPlayer() {
     const nameInput = document.getElementById('nicknameInput');
