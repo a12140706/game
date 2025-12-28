@@ -209,7 +209,7 @@
 <div id="nameModal" class="modal">
   <div class="modal-content">
     <h2 style="color:var(--gold);">請輸入遊戲暱稱</h2>
-    <p style="color:#ccc; font-size:14px;">請勿輸入真人名，排行榜會顯示</p>
+    <p style="color:#ccc; font-size:14px;">用於排行榜顯示</p>
     <input type="text" id="nicknameInput" placeholder="最多8個字" maxlength="8">
     <button class="modal-btn" style="background:var(--red);" onclick="saveNewPlayer()">進入遊戲</button>
   </div>
@@ -274,25 +274,54 @@ const db = firebase.firestore();
   }
 
   // 從 Firebase 抓取前 10 名
-  async function loadRanking() {
+ async function loadRanking() {
     const rankList = document.getElementById('rankList');
     try {
       const snapshot = await db.collection("users").orderBy("balance", "desc").limit(10).get();
       let html = '';
       let i = 1;
+
       snapshot.forEach(doc => {
         const data = doc.data();
+        
+        // --- 樣式邏輯 ---
+        let rankClass = "";
+        let medal = "";
+        let specialStyle = "";
+
+        if (i === 1) {
+          rankClass = "rank-top1"; // 第一名專用 Class
+          medal = "🏆";
+          // 第一名的外框發光與文字漸層
+          specialStyle = "background: linear-gradient(90deg, rgba(255,215,0,0.2) 0%, rgba(255,215,0,0) 100%); border: 1px solid #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.5);";
+        } else if (i === 2) {
+          rankClass = "rank-top2";
+          medal = "🥈";
+          specialStyle = "border-left: 4px solid #c0c0c0;";
+        } else if (i === 3) {
+          rankClass = "rank-top3";
+          medal = "🥉";
+          specialStyle = "border-left: 4px solid #cd7f32;";
+        }
+
         html += `
-          <div class="rank-item">
-            <span class="rank-num">${i}</span>
-            <span class="rank-name">${data.name || '無名氏'}</span>
-            <span class="rank-bal">$${Math.floor(data.balance).toLocaleString()}</span>
+          <div class="rank-item ${rankClass}" style="${specialStyle} margin-bottom: 8px; border-radius: 8px; transition: all 0.3s;">
+            <div style="display:flex; align-items:center;">
+              <span class="rank-num" style="width:30px; font-weight:bold; color:${i <= 3 ? '#fff' : '#888'}">${medal || i}</span>
+              <span class="rank-name" style="color:${i === 1 ? '#ffd700' : '#fff'}; font-size:${i === 1 ? '1.1rem' : '1rem'}; font-weight:${i <= 3 ? 'bold' : 'normal'}">
+                ${data.name || '無名氏'}
+              </span>
+            </div>
+            <span class="rank-bal" style="color:#f1c40f; font-family: monospace; font-weight:bold;">
+              💎${Math.floor(data.balance).toLocaleString()}
+            </span>
           </div>
         `;
         i++;
       });
       rankList.innerHTML = html || '<p style="text-align:center; color:#888;">尚無排名數據</p>';
     } catch (e) {
+      console.error(e);
       rankList.innerHTML = '<p style="text-align:center; color:red;">載入失敗</p>';
     }
   }
