@@ -1,647 +1,974 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
-<title>阿記三缺一</title>
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="阿記娛樂城">
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+  <title>阿記三缺一</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="阿記娛樂城">
 
-<meta name="mobile-web-app-capable" content="yes">
-<style>
-  :root { 
-    --gold: #ffd86b; 
-    --dark-red: #4a0404;
-    --card-bg: rgba(255, 255, 255, 0.1);
-    --red: #ff4757;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  
-  body { 
-    margin: 0; padding: 0;
-    background: radial-gradient(circle at center, #2a0202, #050000);
-    color: #fff; font-family: "Microsoft JhengHei", Arial;
-    height: 100dvh; width: 100vw;
-    display: flex; flex-direction: column;
-    overflow: hidden; 
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  }
-/* 通用項目樣式 */
-.rank-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: transform 0.2s;
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    :root {
+      --gold: #ffd86b;
+      --dark-red: #4a0404;
+      --card-bg: rgba(255, 255, 255, 0.1);
+      --red: #ff4757;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at center, #2a0202, #050000);
+      color: #fff;
+      font-family: "Microsoft JhengHei", Arial;
+      height: 100dvh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+#welcomeUserContainer.rank-item {
+    display: inline-block;
+    padding: 5px 15px;
+    margin-top: 5px;
+    border-radius: 20px;
 }
+    /* 通用項目樣式 */
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.2s;
+    }
 
-/* --- 第一名：呼吸燈 + 金屬流光特效 --- */
-.rank-top1 {
-  background: linear-gradient(110deg, #2a2200 20%, #6b5500 50%, #2a2200 80%);
-  background-size: 200% auto;
-  border: 1px solid #ffd700 !important;
-  animation: 
-    shine-gold 3s linear infinite, 
-    breathing-glow 2s ease-in-out infinite; /* 呼吸燈關鍵 */
-  transform: scale(1.02); /* 稍微放大顯示尊榮感 */
-}
+    /* --- 第一名：呼吸燈 + 金屬流光特效 --- */
+    .rank-top1 {
+      background: linear-gradient(110deg, #2a2200 20%, #6b5500 50%, #2a2200 80%);
+      background-size: 200% auto;
+      border: 1px solid #ffd700 !important;
+      animation:
+        shine-gold 3s linear infinite,
+        breathing-glow 2s ease-in-out infinite;
+      /* 呼吸燈關鍵 */
+      transform: scale(1.02);
+      /* 稍微放大顯示尊榮感 */
+    }
 
-.rank-top1 .rank-name {
-  color: #fff;
-  font-weight: bold;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
-}
+    .rank-top1 .rank-name {
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    }
 
-.rank-top1 .rank-num {
-  font-size: 1.4rem;
-}
-.buy-btn { background: #3b82f6; border:none; color:white; padding:5px 15px; border-radius:5px; font-weight:bold; }
-.equip-btn { background: #10b981; border:none; color:white; padding:5px 15px; border-radius:5px; font-weight:bold; cursor:pointer; }
-/* 呼吸燈動畫：陰影與亮度的強弱變化 */
-@keyframes breathing-glow {
-  0% {
-    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
-    filter: brightness(1);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
-    filter: brightness(1.3); /* 變亮 */
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
-    filter: brightness(1);
-  }
-}
+    .rank-top1 .rank-num {
+      font-size: 1.4rem;
+    }
 
-/* 金屬光澤流動動畫 */
-@keyframes shine-gold {
-  to {
-    background-position: 200% center;
-  }
-}
+    .buy-btn {
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 5px;
+      font-weight: bold;
+    }
 
-/* 第二、三名簡單漸層邊框 */
-.rank-top2 { border-left: 4px solid #c0c0c0; background: rgba(192, 192, 192, 0.1); }
-.rank-top3 { border-left: 4px solid #cd7f32; background: rgba(205, 127, 50, 0.1); }
+    .equip-btn {
+      background: #10b981;
+      border: none;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-.rank-info { display: flex; align-items: center; gap: 10px; }
-.rank-num { min-width: 25px; text-align: center; font-weight: bold; }
-.rank-bal { color: #f1c40f; font-weight: bold; }
-  .header {
-    height: 50px; flex-shrink: 0;
-    background: linear-gradient(to bottom, #5c0a0a, #2a0202);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 15px; border-bottom: 2px solid var(--gold);
-    z-index: 100;
-  }
-  .logo { font-size: 18px; font-weight: 900; color: var(--gold); }
-  .balance-display { background: rgba(0,0,0,0.6); padding: 4px 12px; border-radius: 20px; border: 1px solid var(--gold); font-size: 15px; color: var(--gold); font-weight: bold; cursor: pointer; }
+    /* 呼吸燈動畫：陰影與亮度的強弱變化 */
+    @keyframes breathing-glow {
+      0% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+        filter: brightness(1);
+      }
 
-  .container {
-    flex: 1; display: flex; flex-direction: column;
-    padding: 10px; width: 100%; max-width: 800px; margin: 0 auto;
-    overflow: hidden;
-  }
+      50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+        filter: brightness(1.3);
+        /* 變亮 */
+      }
 
-  .welcome-msg { font-size: 14px; color: #ccc; text-align: center; margin-bottom: 8px; }
+      100% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+        filter: brightness(1);
+      }
+    }
 
-  .game-grid {
-    flex: 1; display: grid;
-    grid-template-columns: repeat(3, 1fr); gap: 10px; 
-    align-content: start; overflow-y: auto; padding-bottom: 10px;
-  }
+    /* 裝備按鈕樣式 */
+    .equip-btn {
+      background: #10b981;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 12px;
+    }
 
-  .game-card {
-    background: var(--card-bg); border: 1px solid #444; border-radius: 12px;
-    display: flex; flex-direction: column; text-decoration: none; color: inherit;
-    min-height: 85px; transition: transform 0.1s;
-  }
-  
-  .game-img { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-  .game-info { height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); border-radius: 0 0 12px 12px; }
-  .game-title { font-size: 12px; color: var(--gold); font-weight: bold; }
+    .buy-btn {
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 12px;
+    }
 
-  .deposit-area { width: 100%; display: flex; gap: 10px; flex-shrink: 0; padding: 10px 0; }
-  .btn-deposit { flex: 2; padding: 12px; border-radius: 12px; border: 2px solid var(--gold); background: linear-gradient(#ff4757, #b91c1c); color: #fff; font-size: 18px; font-weight: 900; }
-  .btn-rank { flex: 1; padding: 12px; border-radius: 12px; border: 2px solid var(--gold); background: linear-gradient(#f59e0b, #92400e); color: #fff; font-size: 15px; font-weight: 900; }
+    /* 特效 1：獄火焚身 (紅色發光) */
+    .fx-fire {
+      border: 1px solid #ff4757 !important;
+      box-shadow: 0 0 10px rgba(255, 71, 87, 0.5), inset 0 0 5px rgba(255, 71, 87, 0.3);
+      background: linear-gradient(90deg, rgba(74, 4, 4, 1) 0%, rgba(139, 0, 0, 1) 100%) !important;
+    }
 
-  .footer { text-align: center; padding: 5px 0; font-size: 10px; color: #444; }
+    /* 特效 2：霓虹極光 (色彩流動) */
+    .fx-neon {
+      border: 1px solid #00d2ff !important;
+      animation: neonMove 3s linear infinite;
+    }
 
-  /* --- 排行榜側邊欄修正 --- */
-  #rankOverlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.7); display: none; z-index: 2999;
-  }
+    @keyframes neonMove {
+      0% {
+        border-color: #00d2ff;
+        box-shadow: 0 0 5px #00d2ff;
+      }
 
-  #rankSidebar {
-    position: fixed; top: 0; right: -100%; /* 初始隱藏在右側 */
-    width: 80%; max-width: 320px; height: 100%;
-    background: #1a0202; border-left: 2px solid var(--gold);
-    z-index: 3000; transition: 0.3s ease; 
-    display: flex; flex-direction: column; padding: 20px;
-  }
-  #rankSidebar.active { right: 0; } /* 啟動時拉回螢幕 */
+      33% {
+        border-color: #9d50bb;
+        box-shadow: 0 0 5px #9d50bb;
+      }
 
-  .rank-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--gold); padding-bottom: 10px; }
-  .rank-list { flex: 1; overflow-y: auto; margin-top: 10px; }
-  .rank-item { display: flex; justify-content: space-between; padding: 12px 5px; border-bottom: 1px solid rgba(255,216,107,0.1); font-size: 14px; }
-  .rank-num { color: var(--gold); font-weight: bold; width: 25px; }
-  .rank-name { flex: 1; margin-left: 5px; }
-  .rank-bal { color: #fff; }
-  .close-rank { font-size: 30px; color: var(--gold); cursor: pointer; }
+      66% {
+        border-color: #3a7bd5;
+        box-shadow: 0 0 5px #3a7bd5;
+      }
 
-  /* 橫向模式調整 */
-  @media (orientation: landscape) {
-    .game-grid { grid-template-columns: repeat(5, 1fr); }
-    .game-card { min-height: 65px; }
-    .game-img { font-size: 22px; }
-  }
+      100% {
+        border-color: #00d2ff;
+        box-shadow: 0 0 5px #00d2ff;
+      }
+    }
 
-  .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; }
-  .modal-content { background: #1a1a1a; border: 2px solid var(--gold); padding: 20px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center; }
-  .modal-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: none; font-size: 16px; font-weight: bold; color: #fff; }
-</style>
+    /* 特效 3：黃金呼吸 (原本的第一名特效，現在大家都能買) */
+    .fx-gold {
+      border: 1px solid #ffd700 !important;
+      animation: breathing-glow 2s ease-in-out infinite;
+    }
+
+    /* 金屬光澤流動動畫 */
+    @keyframes shine-gold {
+      to {
+        background-position: 200% center;
+      }
+    }
+
+    /* 第二、三名簡單漸層邊框 */
+    .rank-top2 {
+      border-left: 4px solid #c0c0c0;
+      background: rgba(192, 192, 192, 0.1);
+    }
+
+    .rank-top3 {
+      border-left: 4px solid #cd7f32;
+      background: rgba(205, 127, 50, 0.1);
+    }
+
+    .rank-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rank-num {
+      min-width: 25px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .rank-bal {
+      color: #f1c40f;
+      font-weight: bold;
+    }
+
+    .header {
+      height: 50px;
+      flex-shrink: 0;
+      background: linear-gradient(to bottom, #5c0a0a, #2a0202);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 15px;
+      border-bottom: 2px solid var(--gold);
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .balance-display {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--gold);
+      font-size: 15px;
+      color: var(--gold);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .welcome-msg {
+      font-size: 14px;
+      color: #ccc;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .game-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      align-content: start;
+      overflow-y: auto;
+      padding-bottom: 10px;
+    }
+
+    .game-card {
+      background: var(--card-bg);
+      border: 1px solid #444;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+      min-height: 85px;
+      transition: transform 0.1s;
+    }
+
+    .game-img {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .game-info {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 0 0 12px 12px;
+    }
+
+    .game-title {
+      font-size: 12px;
+      color: var(--gold);
+      font-weight: bold;
+    }
+
+    .deposit-area {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+      padding: 10px 0;
+    }
+
+    .btn-deposit {
+      flex: 2;
+      padding: 12px;
+      border-radius: 12px;
+      border: 2px solid var(--gold);
+      background: linear-gradient(#ff4757, #b91c1c);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .btn-rank {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 2px solid var(--gold);
+      background: linear-gradient(#f59e0b, #92400e);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 5px 0;
+      font-size: 10px;
+      color: #444;
+    }
+
+    /* --- 排行榜側邊欄修正 --- */
+    #rankOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      z-index: 2999;
+    }
+
+    #rankSidebar {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      /* 初始隱藏在右側 */
+      width: 80%;
+      max-width: 320px;
+      height: 100%;
+      background: #1a0202;
+      border-left: 2px solid var(--gold);
+      z-index: 3000;
+      transition: 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    #rankSidebar.active {
+      right: 0;
+    }
+
+    /* 啟動時拉回螢幕 */
+
+    .rank-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--gold);
+      padding-bottom: 10px;
+    }
+
+    .rank-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    .rank-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 5px;
+      border-bottom: 1px solid rgba(255, 216, 107, 0.1);
+      font-size: 14px;
+    }
+
+    .rank-num {
+      color: var(--gold);
+      font-weight: bold;
+      width: 25px;
+    }
+
+    .rank-name {
+      flex: 1;
+      margin-left: 5px;
+    }
+
+    .rank-bal {
+      color: #fff;
+    }
+
+    .close-rank {
+      font-size: 30px;
+      color: var(--gold);
+      cursor: pointer;
+    }
+
+    /* 橫向模式調整 */
+    @media (orientation: landscape) {
+      .game-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+      .game-card {
+        min-height: 65px;
+      }
+
+      .game-img {
+        font-size: 22px;
+      }
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      border: 2px solid var(--gold);
+      padding: 20px;
+      border-radius: 20px;
+      width: 85%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .modal-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="header">
-  <div class="logo">阿記三缺一</div>
-  <div style="color:var(--gold); font-size:13px; cursor:pointer; text-decoration:underline;" onclick="openShop()">🏪商城</div>
-  <div class="balance-display" onclick="toggleRank()">💎 <span id="mainBalance">0</span></div>
-</div>
-<div>
-<marquee style="flex:1; color:var(--gold);">線上測試版</marquee>
+  <div class="header">
+    <div class="logo">阿記三缺一</div>
+    <div style="color:var(--gold); font-size:13px; cursor:pointer; text-decoration:underline;" onclick="openShop()">🏪商城
+    </div>
+    <div class="balance-display" onclick="toggleRank()">💎 <span id="mainBalance">0</span></div>
+  </div>
+  <div>
+    <marquee style="flex:1; color:var(--gold);">線上測試版</marquee>
+  </div>
+
+  <div class="container">
+    <div class="welcome-msg" id="welcomeUser">名稱</div>
+
+<div class="welcome-msg">
+    <span id="welcomeUserContainer">選擇遊戲</span>
 </div>
 
-<div class="container">
-  <div class="welcome-msg" id="welcomeUser">選擇遊戲</div>
-  
-  <div class="game-grid">
-    <a href="sicbo.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #0a5c32, #084325);">🎲</div>
-      <div class="game-info">
-        <div class="game-title">骰寶</div>
-      </div>
-    </a>
+    <div class="game-grid">
+      <a href="sicbo.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #0a5c32, #084325);">🎲</div>
+        <div class="game-info">
+          <div class="game-title">骰寶</div>
+        </div>
+      </a>
 
-    <a href="slot.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #4a0404, #2a0202);">🎰</div>
-      <div class="game-info">
-        <div class="game-title">777拉霸機</div>
-      </div>
-    </a>
-    <a href="horse.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #1e3a8a, #1e1b4b);">🐎</div>
-      <div class="game-info">
-        <div class="game-title">賽馬場</div>
-      </div>
-    </a>
-     <a href="gemslot.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #5b8a1e, #d1f51e);">💎</div>
-      <div class="game-info">
-        <div class="game-title">寶石礦坑</div>
-      </div>
-    </a>
-    <a href="link.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #0f3fc4, #12e7f6);">🐲</div>
-      <div class="game-info">
-        <div class="game-title">消消樂</div>
-      </div>
-    </a>
-    <a href="mahj.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #e833a2, #d26019);">🀄</div>
-      <div class="game-info">
-        <div class="game-title">麻將消消樂</div>
-      </div>
-    </a>
+      <a href="slot.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #4a0404, #2a0202);">🎰</div>
+        <div class="game-info">
+          <div class="game-title">777拉霸機</div>
+        </div>
+      </a>
+      <a href="horse.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #1e3a8a, #1e1b4b);">🐎</div>
+        <div class="game-info">
+          <div class="game-title">賽馬場</div>
+        </div>
+      </a>
+      <a href="gemslot.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #5b8a1e, #d1f51e);">💎</div>
+        <div class="game-info">
+          <div class="game-title">寶石礦坑</div>
+        </div>
+      </a>
+      <a href="link.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #0f3fc4, #12e7f6);">🐲</div>
+        <div class="game-info">
+          <div class="game-title">消消樂</div>
+        </div>
+      </a>
+      <a href="mahj.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #e833a2, #d26019);">🀄</div>
+        <div class="game-info">
+          <div class="game-title">麻將消消樂</div>
+        </div>
+      </a>
       <a href="heart.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #fcb1df, #f5ac7f);">❤️</div>
-      <div class="game-info">
-        <div class="game-title">愛心</div>
-      </div>
-    </a>
-    <a href="foodlink.html" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #f1c1c1, #56f19e);">🍰</div>
-      <div class="game-info">
-        <div class="game-title">連連看</div>
-      </div>
-    </a>
-    <a href="#" class="game-card">
-      <div class="game-img" style="background: linear-gradient(45deg, #312222, #bad7c7);">🧧</div>
-      <div class="game-info">
-        <div class="game-title">(暫無)未完成刮刮樂</div>
-      </div>
-    </a>
-  </div>
-
-  <div class="deposit-area">
-    <button class="btn-deposit" onclick="openModal()">💸 謀吉阿</button>
-    <button class="btn-rank" onclick="toggleRank()">🏆 排行</button>
-  </div>
-</div>
-
-<div class="footer">
-  &copy; 阿記娛樂城
-</div>
-
-<div id="rankOverlay" onclick="toggleRank()"></div>
-<div id="rankSidebar">
-  <div class="rank-header">
-    <h2 style="color:var(--gold); margin:0;">💎排行榜</h2>
-    <span class="close-rank" onclick="toggleRank()">&times;</span>
-  </div>
-  <div class="rank-list" id="rankList">
-    <p style="text-align:center; color:#888;">載入中...</p>
-  </div>
-</div>
-
-<div id="depositModal" class="modal">
-  <div class="modal-content">
-    <h2 style="color:var(--gold); margin-bottom:15px; font-size: 22px;">刷阿記的卡</h2>
-    <button class="modal-btn" style="background:#3b82f6;" onclick="handleDeposit(10000)">儲值 10,000</button>
-    <button class="modal-btn" style="background:#a855f7;" onclick="handleDeposit(50000)">儲值 50,000</button>
-    <button class="modal-btn" style="background:#f59e0b;" onclick="handleDeposit(100000)">儲值 100,000</button>
-    <button class="modal-btn" style="background:#444; color:#ccc;" onclick="closeModal()">算了</button>
-  </div>
-</div>
-<div id="shopModal" class="modal">
-  <div class="modal-content" style="max-width: 380px; padding: 15px;">
-    <h2 style="color:var(--gold); margin-bottom:10px;">遊戲商城</h2>
-    
-    <div style="display:flex; gap:5px; margin-bottom:15px;">
-      <button class="modal-btn" id="tabTitle" style="margin:0; background:var(--red);" onclick="switchShop('title')">稱號</button>
-      <button class="modal-btn" id="tabEffect" style="margin:0; background:#444;" onclick="switchShop('effect')">排行榜特效</button>
+        <div class="game-img" style="background: linear-gradient(45deg, #fcb1df, #f5ac7f);">❤️</div>
+        <div class="game-info">
+          <div class="game-title">愛心</div>
+        </div>
+      </a>
+      <a href="foodlink.html" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #f1c1c1, #56f19e);">🍰</div>
+        <div class="game-info">
+          <div class="game-title">連連看</div>
+        </div>
+      </a>
+      <a href="#" class="game-card">
+        <div class="game-img" style="background: linear-gradient(45deg, #312222, #bad7c7);">🧧</div>
+        <div class="game-info">
+          <div class="game-title">(暫無)未完成刮刮樂</div>
+        </div>
+      </a>
     </div>
 
-    <div id="shopList" style="max-height: 300px; overflow-y: auto;">
+    <div class="deposit-area">
+      <button class="btn-deposit" onclick="openModal()">💸 謀吉阿</button>
+      <button class="btn-rank" onclick="toggleRank()">🏆 排行</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 阿記娛樂城
+  </div>
+
+  <div id="rankOverlay" onclick="toggleRank()"></div>
+  <div id="rankSidebar">
+    <div class="rank-header">
+      <h2 style="color:var(--gold); margin:0;">💎排行榜</h2>
+      <span class="close-rank" onclick="toggleRank()">&times;</span>
+    </div>
+    <div class="rank-list" id="rankList">
+      <p style="text-align:center; color:#888;">載入中...</p>
+    </div>
+  </div>
+
+  <div id="depositModal" class="modal">
+    <div class="modal-content">
+      <h2 style="color:var(--gold); margin-bottom:15px; font-size: 22px;">刷阿記的卡</h2>
+      <button class="modal-btn" style="background:#3b82f6;" onclick="handleDeposit(10000)">儲值 10,000</button>
+      <button class="modal-btn" style="background:#a855f7;" onclick="handleDeposit(50000)">儲值 50,000</button>
+      <button class="modal-btn" style="background:#f59e0b;" onclick="handleDeposit(100000)">儲值 100,000</button>
+      <button class="modal-btn" style="background:#444; color:#ccc;" onclick="closeModal()">算了</button>
+    </div>
+  </div>
+  <div id="shopModal" class="modal">
+    <div class="modal-content" style="max-width: 380px; padding: 15px;">
+      <h2 style="color:var(--gold); margin-bottom:10px;">遊戲商城</h2>
+
+      <div style="display:flex; gap:5px; margin-bottom:15px;">
+        <button class="modal-btn" id="tabTitle" style="margin:0; background:var(--red);"
+          onclick="switchShop('title')">稱號</button>
+        <button class="modal-btn" id="tabEffect" style="margin:0; background:#444;"
+          onclick="switchShop('effect')">排行榜特效</button>
       </div>
-    
-    <button class="modal-btn" style="background:#222; margin-top:10px; border:1px solid #444;" onclick="closeShop()">離開商城</button>
+
+      <div id="shopList" style="max-height: 300px; overflow-y: auto;">
+      </div>
+
+      <button class="modal-btn" style="background:#222; margin-top:10px; border:1px solid #444;"
+        onclick="closeShop()">離開商城</button>
+    </div>
   </div>
-</div>
 
-<div id="nameModal" class="modal">
-  <div class="modal-content">
-    <h2 style="color:var(--gold);">請輸入遊戲暱稱</h2>
-    <p style="color:#ccc; font-size:14px;">用於排行榜顯示</p>
-    <input type="text" id="nicknameInput" placeholder="最多8個字" maxlength="8">
-    <button class="modal-btn" style="background:var(--red);" onclick="saveNewPlayer()">進入遊戲</button>
+  <div id="nameModal" class="modal">
+    <div class="modal-content">
+      <h2 style="color:var(--gold);">請輸入遊戲暱稱</h2>
+      <p style="color:#ccc; font-size:14px;">用於排行榜顯示</p>
+      <input type="text" id="nicknameInput" placeholder="最多8個字" maxlength="8">
+      <button class="modal-btn" style="background:var(--red);" onclick="saveNewPlayer()">進入遊戲</button>
+    </div>
   </div>
-</div>
 
-<audio id="sndCash" src="https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3" preload="auto"></audio>
+  <audio id="sndCash" src="https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3" preload="auto"></audio>
 
-<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.16.0/firebase-firestore-compat.js"></script>
 
-<script>
-const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+  <script>
+    const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
 
-const firebaseConfig = {
-  apiKey: _k.join(''),
-    authDomain: "game-80d68.firebaseapp.com",
-    projectId: "game-80d68",
-    storageBucket: "game-80d68.firebasestorage.app",
-    messagingSenderId: "636332967920",
-    appId: "1:636332967920:web:29e5600daf4db0ab613f35",
-    measurementId: "G-MJZ4PGEHSQ"
-  };
+    const firebaseConfig = {
+      apiKey: _k.join(''),
+      authDomain: "game-80d68.firebaseapp.com",
+      projectId: "game-80d68",
+      storageBucket: "game-80d68.firebasestorage.app",
+      messagingSenderId: "636332967920",
+      appId: "1:636332967920:web:29e5600daf4db0ab613f35",
+      measurementId: "G-MJZ4PGEHSQ"
+    };
 
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const db = firebase.firestore();
-
-  function updateMainBalance() {
-    const balance = localStorage.getItem('sicbo_balance') || '5000';
-    document.getElementById('mainBalance').textContent = Math.floor(parseFloat(balance)).toLocaleString();
-  }
-
-  function openModal() { document.getElementById('depositModal').style.display = 'flex'; }
-  function closeModal() { document.getElementById('depositModal').style.display = 'none'; }
-
-  async function handleDeposit(amt) {
-    let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
-    balance += amt;
-    localStorage.setItem('sicbo_balance', balance); 
-    const playerId = localStorage.getItem('player_id');
-    if (playerId) {
-      await db.collection("users").doc(playerId).update({ balance: balance });
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
     }
-    document.getElementById('sndCash').play().catch(()=>{});
-    updateMainBalance();
-    alert("阿記幫你刷了 " + amt.toLocaleString());
-    closeModal();
-  }
-// 商品定義
-  const SHOP_DATA = {
-    title: [
-      { id: 't_god', name: '🎲 賭神', price: 1000000 },
-      { id: 't_king', name: '👑 梟雄', price: 500000 },
-      { id: 't_rich', name: '💰 土豪', price: 100000 }
-    ],
-    effect: [
-      { id: 'e_gold', name: '✨ 黃金呼吸', price: 20000000, class: 'fx-gold' },
-      { id: 'e_fire', name: '🔥 地獄火', price: 8000000, class: 'fx-fire' },
-      { id: 'e_neon', name: '🌈 霓虹極光', price: 30000000, class: 'fx-neon' }
-    ]
-  };
+    const db = firebase.firestore();
 
-  let currentShopTab = 'title';
+    function updateMainBalance() {
+      const balance = localStorage.getItem('sicbo_balance') || '5000';
+      document.getElementById('mainBalance').textContent = Math.floor(parseFloat(balance)).toLocaleString();
+    }
 
-  function switchShop(tab) {
-    currentShopTab = tab;
-    document.getElementById('tabTitle').style.background = tab === 'title' ? 'var(--red)' : '#444';
-    document.getElementById('tabEffect').style.background = tab === 'effect' ? 'var(--red)' : '#444';
-    renderShop();
-  }
+    function openModal() { document.getElementById('depositModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('depositModal').style.display = 'none'; }
 
-  function renderShop() {
-    const shopList = document.getElementById('shopList');
-    const myItems = JSON.parse(localStorage.getItem('my_assets') || '{}');
-    const currentEquipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
-    const now = Date.now();
+    async function handleDeposit(amt) {
+      let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+      balance += amt;
+      localStorage.setItem('sicbo_balance', balance);
+      const playerId = localStorage.getItem('player_id');
+      if (playerId) {
+        await db.collection("users").doc(playerId).update({ balance: balance });
+      }
+      document.getElementById('sndCash').play().catch(() => { });
+      updateMainBalance();
+      alert("阿記幫你刷了 " + amt.toLocaleString());
+      closeModal();
+    }
+    // 商品定義
+    const SHOP_DATA = {
+      title: [
+        { id: 't_god', name: '🎲 賭神', price: 1000000 },
+        { id: 't_king', name: '👑 梟雄', price: 500000 },
+        { id: 't_rich', name: '💰 土豪', price: 100000 }
+      ],
+      effect: [
+        { id: 'e_gold', name: '✨ 黃金呼吸', price: 20000000, class: 'fx-gold' },
+        { id: 'e_fire', name: '🔥 地獄火', price: 8000000, class: 'fx-fire' },
+        { id: 'e_neon', name: '🌈 霓虹極光', price: 30000000, class: 'fx-neon' }
+      ]
+    };
 
-    let html = '';
-    SHOP_DATA[currentShopTab].forEach(item => {
-      const expiry = myItems[item.id] || 0;
-      const isOwned = now < expiry;
-      const isEquipped = (currentShopTab === 'title' ? currentEquipped.title : currentEquipped.effect) === item.id;
+    let currentShopTab = 'title';
 
-      html += `
+    function switchShop(tab) {
+      currentShopTab = tab;
+      document.getElementById('tabTitle').style.background = tab === 'title' ? 'var(--red)' : '#444';
+      document.getElementById('tabEffect').style.background = tab === 'effect' ? 'var(--red)' : '#444';
+      renderShop();
+    }
+
+    function renderShop() {
+      const shopList = document.getElementById('shopList');
+      const myItems = JSON.parse(localStorage.getItem('my_assets') || '{}');
+      const currentEquipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
+      const now = Date.now();
+
+      let html = '';
+      SHOP_DATA[currentShopTab].forEach(item => {
+        const expiry = myItems[item.id] || 0;
+        const isOwned = now < expiry;
+        const isEquipped = (currentShopTab === 'title' ? currentEquipped.title : currentEquipped.effect) === item.id;
+
+        html += `
         <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #444; padding:12px; margin-bottom:8px; border-radius:10px; background:rgba(0,0,0,0.3);">
           <div style="text-align:left;">
             <div style="color:var(--gold); font-weight:bold;">${item.name}</div>
-            <div style="color:#aaa; font-size:11px;">${isOwned ? '剩餘: ' + Math.ceil((expiry-now)/(1000*60*60*24)) + '天' : '價格: 💎 ' + item.price.toLocaleString()}</div>
+            <div style="color:#aaa; font-size:11px;">${isOwned ? '剩餘: ' + Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)) + '天' : '價格: 💎 ' + item.price.toLocaleString()}</div>
           </div>
           <div>
-            ${isOwned ? 
-              `<button class="equip-btn" onclick="equipAsset('${currentShopTab}', '${item.id}')">${isEquipped ? '使用中' : '裝備'}</button>` : 
-              `<button class="buy-btn" onclick="buyAsset('${currentShopTab}', '${item.id}', ${item.price})">購買</button>`
-            }
+            ${isOwned ?
+            `<button class="equip-btn" onclick="equipAsset('${currentShopTab}', '${item.id}')">${isEquipped ? '使用中' : '裝備'}</button>` :
+            `<button class="buy-btn" onclick="buyAsset('${currentShopTab}', '${item.id}', ${item.price})">購買</button>`
+          }
           </div>
         </div>
       `;
-    });
-    shopList.innerHTML = html;
-  }
-
-  // 購買與裝備邏輯
-  async function buyAsset(type, id, price) {
-    let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
-    if (balance < price) return alert("錢不夠！不借錢喔！");
-    if (!confirm("確定購買 7 天使用權嗎？")) return;
-
-    balance -= price;
-    const expiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
-    
-    // 更新本地
-    let myAssets = JSON.parse(localStorage.getItem('my_assets') || '{}');
-    myAssets[id] = expiry;
-    localStorage.setItem('my_assets', JSON.stringify(myAssets));
-    localStorage.setItem('sicbo_balance', balance);
-
-    // 同步 Firebase
-    const playerId = localStorage.getItem('player_id');
-    if (playerId) {
-      await db.collection("users").doc(playerId).update({ 
-        balance: balance,
-        assets: myAssets 
       });
+      shopList.innerHTML = html;
     }
 
-    updateMainBalance();
-    renderShop();
-    alert("購買成功！");
-  }
+    // 購買與裝備邏輯
+    async function buyAsset(type, id, price) {
+      let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
+      if (balance < price) return alert("錢不夠！不借錢喔！");
+      if (!confirm("確定購買 7 天使用權嗎？")) return;
 
-  async function equipAsset(type, id) {
-    let equipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
-    equipped[type] = id;
-    localStorage.setItem('equipped_assets', JSON.stringify(equipped));
+      balance -= price;
+      const expiry = Date.now() + (7 * 24 * 60 * 60 * 1000);
 
-    // 同步到排行榜與顯示
-    const playerId = localStorage.getItem('player_id');
-    if (playerId) {
-      // 這裡我們把稱號與特效的 class 存入 Firebase
-      const titleObj = SHOP_DATA.title.find(t => t.id === equipped.title);
-      const effectObj = SHOP_DATA.effect.find(e => e.id === equipped.effect);
-      
-      const updateData = {
-        equipped_title: titleObj ? titleObj.name : "",
-        equipped_fx: effectObj ? effectObj.class : ""
-      };
-      
-      await db.collection("users").doc(playerId).update(updateData);
-    }
+      // 更新本地
+      let myAssets = JSON.parse(localStorage.getItem('my_assets') || '{}');
+      myAssets[id] = expiry;
+      localStorage.setItem('my_assets', JSON.stringify(myAssets));
+      localStorage.setItem('sicbo_balance', balance);
 
-    renderShop();
-    loadRanking();
-    alert("裝備成功！");
-  }
-  // 排行榜顯示切換
-  async function toggleRank() {
-    const sidebar = document.getElementById('rankSidebar');
-    const overlay = document.getElementById('rankOverlay');
-    
-    if (sidebar.classList.contains('active')) {
-      sidebar.classList.remove('active');
-      overlay.style.display = 'none';
-    } else {
-      sidebar.classList.add('active');
-      overlay.style.display = 'block';
-      loadRanking(); // 開啟時抓取最新排名
-    }
-  }
-
-  // 從 Firebase 抓取前 10 名
-async function loadRanking() {
-  const rankList = document.getElementById('rankList');
-  try {
-    const snapshot = await db.collection("users").orderBy("balance", "desc").limit(10).get();
-    let html = '';
-    let i = 1;
-
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      let specialClass = "";
-      let medal = i;
-
-      if (i === 1) {
-        specialClass = "rank-top1";
-        medal = "🏆";
-      } else if (i === 2) {
-        specialClass = "rank-top2";
-        medal = "🥈";
-      } else if (i === 3) {
-        specialClass = "rank-top3";
-        medal = "🥉";
+      // 同步 Firebase
+      const playerId = localStorage.getItem('player_id');
+      if (playerId) {
+        await db.collection("users").doc(playerId).update({
+          balance: balance,
+          assets: myAssets
+        });
       }
 
-      html += `
-        <div class="rank-item ${specialClass}">
-          <div class="rank-info">
-            <span class="rank-num">${medal}</span>
-            <span class="rank-name">${data.name || '無名氏'}</span>
-          </div>
-          <span class="rank-bal">💎${Math.floor(data.balance).toLocaleString()}</span>
-        </div>
-      `;
-      i++;
-    });
-    rankList.innerHTML = html || '<p style="text-align:center; color:#888;">尚無排名數據</p>';
-  } catch (e) {
-    rankList.innerHTML = '<p style="text-align:center; color:red;">載入失敗</p>';
-  }
-}
-
-  async function checkUserStatus() {
-    let playerId = localStorage.getItem('player_id');
-    
-    // --- 關鍵修正：如果沒有 ID，代表是新玩家，直接彈出視窗 ---
-    if (!playerId || playerId === "null") {
-      document.getElementById('nameModal').style.display = 'flex';
       updateMainBalance();
-      return; 
+      renderShop();
+      alert("購買成功！");
     }
 
-    try {
+    async function equipAsset(type, id) {
+      let equipped = JSON.parse(localStorage.getItem('equipped_assets') || '{"title":"","effect":""}');
+      equipped[type] = id;
+      localStorage.setItem('equipped_assets', JSON.stringify(equipped));
+
+      // 同步到排行榜與顯示
+      const playerId = localStorage.getItem('player_id');
+      if (playerId) {
+        // 這裡我們把稱號與特效的 class 存入 Firebase
+        const titleObj = SHOP_DATA.title.find(t => t.id === equipped.title);
+        const effectObj = SHOP_DATA.effect.find(e => e.id === equipped.effect);
+
+        const updateData = {
+          equipped_title: titleObj ? titleObj.name : "",
+          equipped_fx: effectObj ? effectObj.class : ""
+        };
+
+        await db.collection("users").doc(playerId).update(updateData);
+      }
+
+      renderShop();
+      loadRanking();
+      alert("裝備成功！");
+      checkUserStatus();
+    }
+    // 排行榜顯示切換
+    async function toggleRank() {
+      const sidebar = document.getElementById('rankSidebar');
+      const overlay = document.getElementById('rankOverlay');
+
+      if (sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        overlay.style.display = 'none';
+      } else {
+        sidebar.classList.add('active');
+        overlay.style.display = 'block';
+        loadRanking(); // 開啟時抓取最新排名
+      }
+    }
+
+    // 從 Firebase 抓取前 10 名
+    async function loadRanking() {
+      const rankList = document.getElementById('rankList');
+      try {
+        const snapshot = await db.collection("users").orderBy("balance", "desc").limit(10).get();
+        let html = '';
+        let i = 1;
+
+        // 修改 loadRanking 內部的 HTML 生成部分
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          // 特效與稱號處理
+          const fxClass = data.equipped_fx || "";
+          const titlePrefix = data.equipped_title ? `[${data.equipped_title}] ` : "";
+
+          html += `
+    <div class="rank-item ${fxClass}">
+      <div class="rank-info">
+        <span class="rank-num">${i === 1 ? '🏆' : i}</span>
+        <span class="rank-name">${titlePrefix}${data.name || '無名氏'}</span>
+      </div>
+      <span class="rank-bal">💎${Math.floor(data.balance).toLocaleString()}</span>
+    </div>
+  `;
+          i++;
+        });
+        rankList.innerHTML = html || '<p style="text-align:center; color:#888;">尚無排名數據</p>';
+      } catch (e) {
+        rankList.innerHTML = '<p style="text-align:center; color:red;">載入失敗</p>';
+      }
+    }
+
+    async function checkUserStatus() {
+      let playerId = localStorage.getItem('player_id');
+
+      // --- 關鍵修正：如果沒有 ID，代表是新玩家，直接彈出視窗 ---
+      if (!playerId || playerId === "null") {
+        document.getElementById('nameModal').style.display = 'flex';
+        updateMainBalance();
+        return;
+      }
+
+      try {
         const doc = await db.collection("users").doc(playerId).get();
         if (doc.exists) {
-            const cloudData = doc.data();
-            const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
-            const cloudBal = cloudData.balance;
+          const cloudData = doc.data();
+          const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+          const cloudBal = cloudData.balance;
 
-            localStorage.setItem('player_name', cloudData.name);
+          localStorage.setItem('player_name', cloudData.name);
 
-            if (cloudBal !== undefined && cloudBal > localBal) {
-                localStorage.setItem('sicbo_balance', cloudBal);
-            } 
-            else if (cloudBal !== undefined && localBal > cloudBal) {
-                await db.collection("users").doc(playerId).update({ balance: localBal });
-            }
+          if (cloudBal !== undefined && cloudBal > localBal) {
+            localStorage.setItem('sicbo_balance', cloudBal);
+          }
+          else if (cloudBal !== undefined && localBal > cloudBal) {
+            await db.collection("users").doc(playerId).update({ balance: localBal });
+          }
 
-            document.getElementById('welcomeUser').textContent = `歡迎回來，${cloudData.name}`;
-            updateMainBalance();
+          // --- 商城特效與稱號顯示邏輯 ---
+          const welcomeEl = document.getElementById('welcomeUser');
+          const fxClass = cloudData.equipped_fx || ""; // 取得特效 Class (例如 fx-fire)
+          const titlePrefix = cloudData.equipped_title ? `[${cloudData.equipped_title}] ` : ""; // 取得稱號
+          
+          // 更新首頁顯示文字
+          welcomeEl.textContent = `歡迎回來，${titlePrefix}${cloudData.name}`;
+          
+          // 更新首頁顯示特效
+          // 先移除可能存在的舊特效，再根據雲端資料新增
+          welcomeEl.classList.remove('fx-fire', 'fx-neon', 'fx-gold', 'rank-item');
+          if (fxClass) {
+            welcomeEl.classList.add(fxClass);
+            // 為了讓特效更明顯，我們在首頁也套用 rank-item 的基礎樣式
+            welcomeEl.style.display = "inline-block";
+            welcomeEl.style.padding = "5px 15px";
+            welcomeEl.style.borderRadius = "20px";
+          }
+
+          updateMainBalance();
         } else {
-            // 如果有 ID 但雲端查無資料，也視為新玩家
-            document.getElementById('nameModal').style.display = 'flex';
+          // 如果有 ID 但雲端查無資料，也視為新玩家
+          document.getElementById('nameModal').style.display = 'flex';
         }
-    } catch (e) {
-      console.error("Firebase 連線失敗", e);
-      const localName = localStorage.getItem('player_name');
-      if (localName) {
-        document.getElementById('welcomeUser').textContent = `歡迎回來(離線)，${localName}`;
-      } else {
-        // 離線狀態且本地也沒存過名字，一定要彈出視窗
-        document.getElementById('nameModal').style.display = 'flex';
-      }
-      updateMainBalance();
-    }
-  }
-// --- 商城功能 ---
-  function openShop() { document.getElementById('shopModal').style.display = 'flex'; }
-  function closeShop() { document.getElementById('shopModal').style.display = 'none'; }
-
-  async function buyTitle(titleName, price) {
-    let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
-    
-    if (balance < price) {
-      alert("阿記說：你錢不夠啦，再去贏一點！");
-      return;
-    }
-
-    if (!confirm(`確定要花費 💎 ${price.toLocaleString()} 購買「${titleName}」嗎？`)) return;
-
-    // 扣錢
-    balance -= price;
-    localStorage.setItem('sicbo_balance', balance);
-    
-    // 更新雲端名字 (加上稱號)
-    const playerId = localStorage.getItem('player_id');
-    const baseName = localStorage.getItem('player_name') || '無名氏';
-    const newFullName = `${titleName} ${baseName}`;
-
-    if (playerId) {
-      try {
-        await db.collection("users").doc(playerId).update({ 
-          balance: balance,
-          name: newFullName // 更新含有稱號的名字
-        });
-        localStorage.setItem('player_name', newFullName); // 本地同步更新
-        alert("購買成功！稱號已套用至排行榜。");
       } catch (e) {
-        console.error("商城更新失敗", e);
-        alert("雲端同步失敗，但餘額已扣除(本地)");
+        console.error("Firebase 連線失敗", e);
+        const localName = localStorage.getItem('player_name');
+        if (localName) {
+          document.getElementById('welcomeUser').textContent = `歡迎回來(離線)，${localName}`;
+        } else {
+          // 離線狀態且本地也沒存過名字，一定要彈出視窗
+          document.getElementById('nameModal').style.display = 'flex';
+        }
+        updateMainBalance();
+      }
+    }
+    // --- 商城功能 ---
+    function openShop() { document.getElementById('shopModal').style.display = 'flex'; }
+    function closeShop() { document.getElementById('shopModal').style.display = 'none'; }
+
+    async function buyTitle(titleName, price) {
+      let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
+
+      if (balance < price) {
+        alert("阿記說：你錢不夠啦，再去贏一點！");
+        return;
+      }
+
+      if (!confirm(`確定要花費 💎 ${price.toLocaleString()} 購買「${titleName}」嗎？`)) return;
+
+      // 扣錢
+      balance -= price;
+      localStorage.setItem('sicbo_balance', balance);
+
+      // 更新雲端名字 (加上稱號)
+      const playerId = localStorage.getItem('player_id');
+      const baseName = localStorage.getItem('player_name') || '無名氏';
+      const newFullName = `${titleName} ${baseName}`;
+
+      if (playerId) {
+        try {
+          await db.collection("users").doc(playerId).update({
+            balance: balance,
+            name: newFullName // 更新含有稱號的名字
+          });
+          localStorage.setItem('player_name', newFullName); // 本地同步更新
+          alert("購買成功！稱號已套用至排行榜。");
+        } catch (e) {
+          console.error("商城更新失敗", e);
+          alert("雲端同步失敗，但餘額已扣除(本地)");
+        }
+      }
+
+      updateMainBalance();
+      document.getElementById('welcomeUser').textContent = `歡迎回來，${newFullName}`;
+      closeShop();
+      loadRanking(); // 重新整理排行榜看到新稱號
+    }
+    // --- 關鍵修復：儲存暱稱 ---
+    async function saveNewPlayer() {
+      const nameInput = document.getElementById('nicknameInput');
+      const name = nameInput.value.trim();
+      if (!name) return alert("請輸入名字！");
+
+      // 1. 強制重新獲取一次 ID，如果沒有就地生成
+      let playerId = localStorage.getItem('player_id');
+      if (!playerId || playerId === "" || playerId === "null") {
+        playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
+        localStorage.setItem('player_id', playerId);
+      }
+
+      const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
+
+      try {
+        // 2. 先存本地，確保 UI 能先動
+        localStorage.setItem('player_name', name);
+        localStorage.setItem('sicbo_balance', localBal);
+
+        // 3. 執行 Firebase 寫入 (此時 playerId 絕對有值)
+        await db.collection("users").doc(playerId).set({
+          name: name,
+          balance: localBal,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        document.getElementById('nameModal').style.display = 'none';
+        document.getElementById('welcomeUser').textContent = `歡迎，${name}`;
+        updateMainBalance();
+      } catch (e) {
+        console.error("儲存失敗:", e);
+        // 萬一 Firebase 真的還是失敗，至少要讓玩家關掉視窗進入遊戲
+        document.getElementById('nameModal').style.display = 'none';
+        document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
+        updateMainBalance();
       }
     }
 
-    updateMainBalance();
-    document.getElementById('welcomeUser').textContent = `歡迎回來，${newFullName}`;
-    closeShop();
-    loadRanking(); // 重新整理排行榜看到新稱號
-  }
-  // --- 關鍵修復：儲存暱稱 ---
-  async function saveNewPlayer() {
-    const nameInput = document.getElementById('nicknameInput');
-    const name = nameInput.value.trim();
-    if (!name) return alert("請輸入名字！");
-
-    // 1. 強制重新獲取一次 ID，如果沒有就地生成
-    let playerId = localStorage.getItem('player_id');
-    if (!playerId || playerId === "" || playerId === "null") {
-      playerId = 'u' + Date.now() + Math.floor(Math.random() * 1000);
-      localStorage.setItem('player_id', playerId);
-    }
-
-    const localBal = parseFloat(localStorage.getItem('sicbo_balance')) || 5000;
-
-    try {
-      // 2. 先存本地，確保 UI 能先動
-      localStorage.setItem('player_name', name);
-      localStorage.setItem('sicbo_balance', localBal);
-
-      // 3. 執行 Firebase 寫入 (此時 playerId 絕對有值)
-      await db.collection("users").doc(playerId).set({
-        name: name,
-        balance: localBal,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      document.getElementById('nameModal').style.display = 'none';
-      document.getElementById('welcomeUser').textContent = `歡迎，${name}`;
+    window.onload = function () {
       updateMainBalance();
-    } catch (e) {
-      console.error("儲存失敗:", e);
-      // 萬一 Firebase 真的還是失敗，至少要讓玩家關掉視窗進入遊戲
-      document.getElementById('nameModal').style.display = 'none';
-      document.getElementById('welcomeUser').textContent = `歡迎(本地)，${name}`;
-      updateMainBalance();
-    }
-  }
+      checkUserStatus();
+    };
 
-  window.onload = function() {
-    updateMainBalance();
-    checkUserStatus();
-  };
-
-  document.addEventListener('click', function(e) {
-    let target = e.target.closest('a');
-    if (target && target.href && target.getAttribute('href') !== '#') {
+    document.addEventListener('click', function (e) {
+      let target = e.target.closest('a');
+      if (target && target.href && target.getAttribute('href') !== '#') {
         e.preventDefault();
         window.location.href = target.href;
-    }
-  }, false);
+      }
+    }, false);
 
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'sicbo_balance') updateMainBalance();
-  });
-</script>
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'sicbo_balance') updateMainBalance();
+    });
+  </script>
 </body>
+
 </html>
