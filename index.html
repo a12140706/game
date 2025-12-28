@@ -790,7 +790,7 @@
           const data = doc.data();
           // 特效與稱號處理
           const fxClass = data.equipped_fx || "";
-          const titlePrefix = data.equipped_title ? `[${data.equipped_title}] ` : "";
+          const titlePrefix = data.equipped_title ? `${data.equipped_title} ` : "";
 
           html += `
     <div class="rank-item ${fxClass}">
@@ -841,7 +841,7 @@
           const titlePrefix = cloudData.equipped_title ? `[${cloudData.equipped_title}] ` : ""; // 取得稱號
           
           // 更新首頁顯示文字
-          welcomeEl.textContent = `歡迎回來，${titlePrefix}${cloudData.name}`;
+          welcomeEl.textContent = `${titlePrefix}${cloudData.name}`;
           
           // 更新首頁顯示特效
           // 先移除可能存在的舊特效，再根據雲端資料新增
@@ -879,7 +879,7 @@
       let balance = parseFloat(localStorage.getItem('sicbo_balance')) || 0;
 
       if (balance < price) {
-        alert("阿記說：你錢不夠啦，再去贏一點！");
+        alert("錢不夠啦");
         return;
       }
 
