@@ -162,6 +162,10 @@
   <div class="sound-toggle" onclick="toggleMute()" id="soundIcon">🔊</div>
   <div class="sound-toggle" onclick="cycleBGM()" id="bgmBtn">🎵 音樂 1</div>
   <div class="balance-box">💎 <span id="balanceText">0</span></div>
+  <div class="triple-winner-btn" onclick="showRank()">
+        <span>🏆 最新圍骰得主</span>
+        <div id="latestWinnerInfo">等待中...</div>
+    </div>
   <marquee style="flex:1; color:var(--gold);">轉橫的玩</marquee>
   <a href="index.html" style="text-decoration:none;">
     <button style="background:none; border:1px solid #777; color:#ccc; border-radius:5px; padding:5px 12px; font-size:14px;">🏠 回大廳</button>
@@ -173,10 +177,7 @@
     <div style="text-align:center; color:var(--gold); font-size:12px; font-weight:bold; padding-bottom:5px; border-bottom:1px solid #444;">開骰紀錄</div>
     <div id="historyList"></div>
     
-    <div class="triple-winner-btn" onclick="showRank()">
-        <span>🏆 最新圍骰得主</span>
-        <div id="latestWinnerInfo">等待中...</div>
-    </div>
+    
 
     <div class="miss-box">
         <div>未開局數</div>
