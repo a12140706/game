@@ -838,7 +838,7 @@
           // --- 商城特效與稱號顯示邏輯 ---
           const welcomeEl = document.getElementById('welcomeUser');
           const fxClass = cloudData.equipped_fx || ""; // 取得特效 Class (例如 fx-fire)
-          const titlePrefix = cloudData.equipped_title ? `[${cloudData.equipped_title}] ` : ""; // 取得稱號
+          const titlePrefix = cloudData.equipped_title ? `${cloudData.equipped_title} ` : ""; // 取得稱號
           
           // 更新首頁顯示文字
           welcomeEl.textContent = `${titlePrefix}${cloudData.name}`;
