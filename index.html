@@ -844,19 +844,42 @@
           welcomeEl.textContent = `${titlePrefix}${cloudData.name}`;
           
           // 更新首頁顯示特效
-          // 先移除可能存在的舊特效，再根據雲端資料新增
+          // 先清除所有舊樣式與 Class
           welcomeEl.classList.remove('fx-fire', 'fx-neon', 'fx-gold', 'rank-item');
+          welcomeEl.style.cssText = ""; // 清除之前可能殘留的 inline style
+          
           if (fxClass) {
             welcomeEl.classList.add(fxClass);
-            // 為了讓特效更明顯，我們在首頁也套用 rank-item 的基礎樣式
+            
+            // 讓特效呈現「區塊感」
             welcomeEl.style.display = "inline-block";
-            welcomeEl.style.padding = "5px 15px";
-            welcomeEl.style.borderRadius = "20px";
+            welcomeEl.style.padding = "8px 20px";
+            welcomeEl.style.borderRadius = "25px";
+            welcomeEl.style.fontWeight = "bold";
+            welcomeEl.style.marginTop = "10px";
+            welcomeEl.style.fontSize = "16px";
+            welcomeEl.style.textShadow = "1px 1px 2px rgba(0,0,0,0.8)";
+
+            // 針對不同特效強制補強背景，確保「特效感」十足
+            if (fxClass === 'fx-fire') {
+              welcomeEl.style.background = "linear-gradient(90deg, #4a0404, #ff4757)";
+              welcomeEl.style.boxShadow = "0 0 15px rgba(255, 71, 87, 0.6)";
+            } else if (fxClass === 'fx-gold') {
+              welcomeEl.style.background = "linear-gradient(110deg, #2a2200, #6b5500, #2a2200)";
+              welcomeEl.style.backgroundSize = "200% auto";
+              welcomeEl.style.color = "#fff";
+            } else if (fxClass === 'fx-neon') {
+              welcomeEl.style.background = "rgba(0,0,0,0.6)";
+              // fx-neon 本身帶有 animation，這裡主要靠 Class 驅動
+            }
+          } else {
+            // 無特效時的預設文字樣式
+            welcomeEl.style.color = "#ccc";
+            welcomeEl.style.fontSize = "14px";
           }
 
           updateMainBalance();
         } else {
-          // 如果有 ID 但雲端查無資料，也視為新玩家
           document.getElementById('nameModal').style.display = 'flex';
         }
       } catch (e) {
@@ -865,7 +888,6 @@
         if (localName) {
           document.getElementById('welcomeUser').textContent = `歡迎回來(離線)，${localName}`;
         } else {
-          // 離線狀態且本地也沒存過名字，一定要彈出視窗
           document.getElementById('nameModal').style.display = 'flex';
         }
         updateMainBalance();
