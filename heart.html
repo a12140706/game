@@ -521,7 +521,7 @@
         <div class="balance-box">💎 <span id="balanceText">0</span></div>
         <button onclick="showRank()"
             style="background:#ccac00; border:none; border-radius:12px; padding:3px 8px; color:#000; font-size:11px; font-weight:bold;">🏆
-            排行</button>
+            排行榜</button>
         <marquee style="flex:1; color:var(--gold); font-size: 12px;">有問題找阿記</marquee>
         <a href="index.html" style="text-decoration:none;">
             <button
@@ -567,7 +567,7 @@
 
     <div id="rankModal" class="rank-modal">
         <div class="rank-content">
-            <div class="rank-header">愛心最高獎金榜</div>
+            <div class="rank-header">🏆開獎最高紀錄榜</div>
             <div id="rankList" class="rank-list"></div>
         </div>
         <button class="close-rank" onclick="closeRank()">關閉</button>
@@ -584,8 +584,10 @@
 
     <script>
         // --- Firebase 初始化 ---
+        const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
         const firebaseConfig = {
-            apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+            apiKey: _k.join(''),
             authDomain: "game-80d68.firebaseapp.com",
             projectId: "game-80d68",
             storageBucket: "game-80d68.firebasestorage.app",

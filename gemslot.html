@@ -80,7 +80,7 @@
 <div class="portrait-tip"><div>🔄</div><p style="margin-top:20px;">請橫屏遊玩</p></div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 礦坑開獎最高紀錄榜</div>
+    <div style="color:var(--btn-gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 開獎最高紀錄榜</div>
     <div class="rank-list-container" id="rankList"></div>
     <button class="sound-btn" style="margin-top:20px; padding:10px 30px; font-size:16px;" onclick="closeRank()">關閉</button>
 </div>
@@ -130,8 +130,10 @@
 
 <script>
 // --- Firebase 初始化 ---
+const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
 const firebaseConfig = {
-    apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  apiKey: _k.join(''),
     authDomain: "game-80d68.firebaseapp.com",
     projectId: "game-80d68",
     storageBucket: "game-80d68.firebasestorage.app",

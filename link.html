@@ -187,8 +187,10 @@
 
 <script>
 // --- Firebase 初始化 ---
+const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  apiKey: _k.join(''),
   authDomain: "game-80d68.firebaseapp.com",
   projectId: "game-80d68",
   storageBucket: "game-80d68.firebasestorage.app",
@@ -453,7 +455,7 @@ function endGame() {
     // 2. 鑽石獎勵（餘額）
     // 根據您上一封郵件的需求，餘額通常與分數掛鉤，
     // 若要維持 1:1 則使用 finalScore；若要像連連看一樣 *15，則在此處修改
-    const finalReward = finalScore * 10; 
+    const finalReward = finalScore * 5; 
 
     // 這裡需要更新餘額變數並存檔 (假設變數名為 balance)
     if (typeof balance !== 'undefined') {

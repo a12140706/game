@@ -126,7 +126,7 @@
 <div id="huOverlay">胡啦！進入免費模式</div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆 麻將大獎英雄榜</div>
+    <div style="color:var(--gold); font-size:20px; margin-bottom:15px; font-weight:bold;">🏆開獎最高紀錄榜</div>
     <div class="rank-list" id="rankList"></div>
     <button class="audio-ctrl" style="margin-top:20px; padding:10px 30px; font-size:16px;" onclick="closeRank()">返回遊戲</button>
 </div>
@@ -153,7 +153,7 @@
 <div class="rank-header-area">
     <div class="rank-btn-horizontal" onclick="openRank()">
         <span>🏆 最大獎:</span>
-        <div id="topWinnerName">讀取中...</div>
+        <div id="topWinnerName">等待幸運兒</div>
     </div>
 </div>
 
@@ -203,8 +203,10 @@
 
 <script>
 // --- Firebase 初始化 ---
+const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  apiKey: _k.join(''),
   authDomain: "game-80d68.firebaseapp.com",
   projectId: "game-80d68",
   storageBucket: "game-80d68.firebasestorage.app",

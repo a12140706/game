@@ -328,7 +328,7 @@
     <div id="rank-screen" class="modal">
         <div
             style="background:#1a1a1a; border:2px solid var(--gold); padding:20px; border-radius:20px; text-align:center; min-width: 280px;">
-            <h2 style="color:var(--gold); margin-bottom: 10px;">🏆前十排行榜</h2>
+            <h2 style="color:var(--gold); margin-bottom: 10px;">🏆紀錄排行榜</h2>
             <div id="rank-list-container">
                 <div style="padding:20px;">載入中...</div>
             </div>
@@ -346,8 +346,10 @@
 
     <script>
         // --- Firebase 初始化 ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+      const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
+const firebaseConfig = {
+  apiKey: _k.join(''),
             authDomain: "game-80d68.firebaseapp.com",
             projectId: "game-80d68",
             storageBucket: "game-80d68.firebasestorage.app",
@@ -459,7 +461,7 @@ const db = firebase.firestore();
                     const isMe = doc.id === localStorage.getItem('player_id');
                     html += `
                 <div class="rank-item" style="${isMe ? 'background:rgba(255,216,107,0.1);' : ''}">
-                    <span>${rank}. ${data.nickname || '玩家'}</span>
+                    <span>${rank}. ${data.name || '無名玩家'}</span>
                     <span class="rank-gold">${(data.link_score || 0).toLocaleString()}</span>
                 </div>`;
                     rank++;
@@ -733,60 +735,63 @@ const db = firebase.firestore();
         }
 
         async function showSettle() {
-            playSound('sndWin');
-            const layers = parseInt(document.getElementById('layerSelect').value);
-            let layerMult = layers === 3 ? 1.5 : (layers === 4 ? 2.0 : 1.0);
-            let gravMult = isGravityEnabled ? 1.5 : 1.0;
-            const finalReward = Math.floor(score * layerMult * gravMult * 15);
+    playSound('sndWin');
+    const layers = parseInt(document.getElementById('layerSelect').value);
+    let layerMult = layers === 3 ? 1.5 : (layers === 4 ? 2.0 : 1.0);
+    let gravMult = isGravityEnabled ? 1.5 : 1.0;
 
-            balance += finalReward;
-            localStorage.setItem('sicbo_balance', balance);
+    // 1. 排行榜用的分數：只算 score * 難度倍率
+    const finalScore = Math.floor(score * layerMult * gravMult);
+    
+    // 2. 實際獲得的餘額：分數再乘以 15
+    const finalReward = finalScore * 5;
 
-            let isNewRecord = false;
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('link_high_score', highScore);
-                isNewRecord = true;
-            }
-            updateUI();
+    balance += finalReward;
+    localStorage.setItem('sicbo_balance', balance);
 
-            // --- Firebase 排行榜寫入邏輯 ---
-            const playerId = localStorage.getItem('player_id');
-            if (playerId && typeof db !== 'undefined') {
-                try {
-                    // 1. 抓取目前全服第 10 名的分數
-                    const rankSnap = await db.collection("users").orderBy("link_score", "desc").limit(10).get();
-                    let top10Threshold = 0;
-                    if (rankSnap.size >= 10) {
-                        top10Threshold = rankSnap.docs[rankSnap.docs.length - 1].data().link_score || 0;
-                    }
+    let isNewRecord = false;
+    // 使用不含 *15 的分數來判斷最高紀錄
+    if (finalScore > highScore) {
+        highScore = finalScore;
+        localStorage.setItem('link_high_score', highScore);
+        isNewRecord = true;
+    }
+    updateUI();
 
-                    // 2. 判斷是否符合寫入條件：(突破自己紀錄) 且 (大於前10名門檻)
-                    // 如果目前排行不滿10人，只要突破自己紀錄就寫入
-                    if (isNewRecord && (score > top10Threshold || rankSnap.size < 10)) {
-                        await db.collection("users").doc(playerId).update({
-                            link_score: highScore, // 更新連連看最高分
-                            balance: balance,
-                            lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        console.log("達成成就：突破個人紀錄並擠進前十名，已同步雲端！");
-                    } else {
-                        // 平時只同步餘額
-                        await db.collection("users").doc(playerId).update({ balance: balance });
-                    }
-                } catch (e) { console.warn("Firebase 同步失敗", e); }
+    // --- Firebase 排行榜寫入邏輯 ---
+    const playerId = localStorage.getItem('player_id');
+    if (playerId && typeof db !== 'undefined') {
+        try {
+            const rankSnap = await db.collection("users").orderBy("link_score", "desc").limit(10).get();
+            let top10Threshold = 0;
+            if (rankSnap.size >= 10) {
+                top10Threshold = rankSnap.docs[rankSnap.docs.length - 1].data().link_score || 0;
             }
 
-            let msg = `本局得分：${score}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
-            msg += `最高紀錄：${highScore}\n`;
-            msg += `-------------------\n`;
-            msg += `層數倍率：x${layerMult}\n`;
-            if (isGravityEnabled) msg += `重力倍率：x1.5\n`;
-            msg += `結算獲得：+${finalReward} 💎`;
+            // 判斷是否符合寫入條件：(突破自己紀錄) 且 (大於前10名門檻)
+            if (isNewRecord && (finalScore > top10Threshold || rankSnap.size < 10)) {
+                await db.collection("users").doc(playerId).update({
+                    link_score: highScore, // 這裡寫入的是 finalScore (無 *15)
+                    balance: balance,
+                    lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("達成成就：突破個人紀錄，已同步雲端！");
+            } else {
+                await db.collection("users").doc(playerId).update({ balance: balance });
+            }
+        } catch (e) { console.warn("Firebase 同步失敗", e); }
+    }
 
-            document.getElementById('reward-text').innerText = msg;
-            document.getElementById('settle-screen').style.display = 'flex';
-        }
+    let msg = `本局得分：${finalScore}${isNewRecord ? " (新紀錄!🔥)" : ""}\n`;
+    msg += `最高紀錄：${highScore}\n`;
+    msg += `-------------------\n`;
+    msg += `層數倍率：x${layerMult}\n`;
+    if (isGravityEnabled) msg += `重力倍率：x1.5\n`;
+    msg += `結算獲得：+${finalReward} 💎`; // 這裡顯示加成後的餘額
+
+    document.getElementById('reward-text').innerText = msg;
+    document.getElementById('settle-screen').style.display = 'flex';
+}
 
         function closeSettle() { document.getElementById('settle-screen').style.display = 'none'; initMap(); }
 

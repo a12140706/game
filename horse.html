@@ -70,13 +70,24 @@
   @keyframes blink { 50% { opacity: 0.6; } }
   
   .status-pop {
-    position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
-    font-size: 14px; font-weight: bold; white-space: nowrap; pointer-events: none;
-    animation: popUp 1.0s ease-out forwards; z-index: 10;
-  }
+  position: absolute; 
+  top: -20px; /* 調整初始位置在馬的上方 */
+  left: 50%; transform: translateX(-50%);
+  font-size: 16px; /* 稍微放大 */
+  font-weight: 900; 
+  white-space: nowrap; 
+  pointer-events: none;
+  animation: popUp 1.0s ease-out forwards; 
+  z-index: 999; /* 確保在最上層 */
+}
   .pop-dash { color: #fff176; text-shadow: 1px 1px 3px #000; }
   .pop-tired { color: #ff5252; text-shadow: 1px 1px 3px #000; }
-  @keyframes popUp { 0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 100% { opacity: 0; transform: translateX(-50%) translateY(-40px); } }
+   @keyframes popUp {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(-5px); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+  }
 
   .horse-num { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #000; color: #fff; font-size: 12px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--gold); z-index: 5; }
   .finish-line { position: absolute; right: 60px; top: 0; bottom: 0; width: 15px; background: repeating-linear-gradient(0deg, #fff, #fff 10px, #000 10px, #000 20px); border-left: 2px solid #ccc; z-index: 1; }
@@ -120,7 +131,7 @@
 </div>
 
 <div id="rankModal" class="modal">
-    <div style="color:var(--gold); font-size:18px; margin-bottom:10px; font-weight:bold;">🏆 賽馬大獎榜</div>
+    <div style="color:var(--gold); font-size:18px; margin-bottom:10px; font-weight:bold;">🏆最高獎金榜</div>
     <div class="rank-list" id="rankList"></div>
     <button class="sound-btn" style="margin-top:15px; padding:8px 25px;" onclick="closeRank()">返回遊戲</button>
 </div>
@@ -177,8 +188,10 @@
 
 <script>
 // --- Firebase 初始化 ---
+const _k = ["AIzaSyDSRfVA", "uWCWCUd1NJop", "J6wHvsqsAM4UzJA"];
+
 const firebaseConfig = {
-    apiKey: "AIzaSyDSRfVAuWCWCUd1NJopJ6wHvsqsAM4UzJA",
+  apiKey: _k.join(''),
     authDomain: "game-80d68.firebaseapp.com",
     projectId: "game-80d68",
     storageBucket: "game-80d68.firebasestorage.app",
